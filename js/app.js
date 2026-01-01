@@ -38,15 +38,19 @@ const App = {
         this.updateHeader();
     },
 
-    updateHeader() {
+    updateHeader(retryCount = 0) {
         const backBtn = document.getElementById('back-btn');
         const addBtn = document.getElementById('add-gate-btn');
         const title = document.getElementById('app-title');
 
-        // Safety check
+        // Safety check with max retries
         if (!title || !backBtn || !addBtn) {
-            console.warn('Header elements not found, retrying...');
-            setTimeout(() => this.updateHeader(), 100);
+            if (retryCount < 10) {  // Max 10 retries = 1 second
+                console.warn('Header elements not found, retrying...');
+                setTimeout(() => this.updateHeader(retryCount + 1), 100);
+            } else {
+                console.error('Header elements not found after 10 retries. Skipping header update.');
+            }
             return;
         }
 
