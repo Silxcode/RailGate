@@ -96,9 +96,9 @@ const App = {
         const cities = StationService.getPopularCities(10);
 
         container.innerHTML = cities.map(city => `
-            <div class="city-card" data-city="${city.name}">
-                <h3>${city.name}</h3>
-                <p>${city.stationCount} station${city.stationCount > 1 ? 's' : ''}</p>
+            <div class="glass-btn p-4 rounded-xl cursor-pointer hover:bg-white/20 text-left transition-all" data-city="${city.name}">
+                <h3 class="font-bold text-lg text-white mb-1">${city.name}</h3>
+                <p class="text-xs text-slate-300 font-medium">${city.stationCount} station${city.stationCount > 1 ? 's' : ''}</p>
             </div>
         `).join('');
 
@@ -135,9 +135,9 @@ const App = {
             }
 
             container.innerHTML = results.map(city => `
-                <div class="city-card" data-city="${city.name}" style="margin-bottom: 0.75rem;">
-                    <h3>${city.name}</h3>
-                    <p>${city.stationCount} station${city.stationCount > 1 ? 's' : ''}</p>
+                <div class="glass-btn p-4 rounded-xl cursor-pointer mb-2 text-left" data-city="${city.name}">
+                    <h3 class="font-bold text-lg text-white mb-1">${city.name}</h3>
+                    <p class="text-xs text-slate-300 font-medium">${city.stationCount} station${city.stationCount > 1 ? 's' : ''}</p>
                 </div>
             `).join('');
 
@@ -167,11 +167,15 @@ const App = {
         const list = document.getElementById('station-list');
 
         list.innerHTML = stations.map(station => `
-            <div class="station-card" data-code="${station.code}">
-                <h3>${station.name}</h3>
-                <span class="station-code">${station.code}</span>
-                <div class="station-details">
-                    ${station.zone ? `Zone: ${station.zone}` : ''} • ${station.state || ''}
+            <div class="glass-btn p-5 rounded-2xl cursor-pointer text-left relative overflow-hidden group active:scale-95 transition-all" data-code="${station.code}">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="font-bold text-lg text-white pr-12">${station.name}</h3>
+                    <span class="absolute top-4 right-4 bg-white/10 px-2 py-1 rounded text-xs font-mono text-slate-300 border border-white/10 group-hover:bg-white/20 transition-colors">${station.code}</span>
+                </div>
+                <div class="text-xs text-slate-400 font-medium flex items-center gap-2">
+                    ${station.zone ? `<span class="bg-indigo-500/20 px-2 py-0.5 rounded text-indigo-200 border border-indigo-500/20">Zone: ${station.zone}</span>` : ''}
+                    <span class="text-slate-500">•</span>
+                    <span class="text-slate-300">${station.state || ''}</span>
                 </div>
             </div>
         `).join('');
@@ -247,14 +251,19 @@ const App = {
 
         countElement.innerText = `${gates.length} gates found`;
         listContainer.innerHTML = gates.length === 0
-            ? '<p style="text-align:center; padding:2rem; color:#64748b;">No gates found nearby</p>'
+            ? '<p class="text-center p-8 text-slate-400 font-medium">No gates found nearby</p>'
             : gates.map(gate => `
-                <div class="gate-card" data-id="${gate.id}">
-                    <div class="gate-info">
-                        <h3>${gate.name}</h3>
-                        <p>${gate.prediction.message}</p>
+                <div class="glass-btn p-4 rounded-xl flex justify-between items-center cursor-pointer group active:scale-95 transition-all border border-white/5 bg-white/5 hover:bg-white/10" data-id="${gate.id}">
+                    <div class="flex-1 pr-4">
+                        <h3 class="font-bold text-white text-base mb-1 group-hover:text-indigo-300 transition-colors">${gate.name}</h3>
+                        <p class="text-xs text-slate-300 font-medium flex items-center gap-1">
+                           ${gate.prediction.message}
+                        </p>
                     </div>
-                    <div class="status-badge status-${gate.prediction.status}">
+                    <div class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider
+                        ${gate.prediction.status === 'open' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                    gate.prediction.status === 'closed' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' :
+                        'bg-amber-500/20 text-amber-300 border border-amber-500/30'}">
                         ${gate.prediction.status}
                     </div>
                 </div>
@@ -271,30 +280,39 @@ const App = {
         document.getElementById('gate-detail-view').classList.remove('hidden');
 
         document.getElementById('gate-details').innerHTML = `
-            <h2>${gate.name}</h2>
-            <div class="status-badge status-${gate.prediction.status}">${gate.prediction.status.toUpperCase()}</div>
-            <p style="margin-top:1rem;">${gate.prediction.dataSource || '📅 Schedule'} | ${Math.round(gate.prediction.confidence * 100)}%</p>
-            ${gate.prediction.quality ? `<p style="font-size:0.875rem;color:#64748b;">📊 ${gate.prediction.quality.reportCount} reports • ${gate.prediction.quality.latestUpdate}</p>` : ''}
+            <h2 class="text-2xl font-bold text-white mb-2">${gate.name}</h2>
+            <div class="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 
+                ${gate.prediction.status === 'open' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                gate.prediction.status === 'closed' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' :
+                    'bg-amber-500/20 text-amber-300 border border-amber-500/30'}">
+                ${gate.prediction.status.toUpperCase()}
+            </div>
+            <p class="text-sm font-medium text-slate-200 mb-1 flex items-center gap-2">
+                <span class="opacity-70">${gate.prediction.dataSource || '📅 Schedule'}</span> 
+                <span class="w-1 h-1 rounded-full bg-slate-500"></span> 
+                <span>${Math.round(gate.prediction.confidence * 100)}% Match</span>
+            </p>
+            ${gate.prediction.quality ? `<p class="text-xs text-slate-400 font-medium mb-6">📊 ${gate.prediction.quality.reportCount} reports • ${gate.prediction.quality.latestUpdate}</p>` : '<div class="mb-6"></div>'}
             
-            <div style="margin-top:1.5rem; background:#f1f5f9; padding:1rem; border-radius:12px;">
-                <p style="font-weight:500; font-size:0.875rem; margin-bottom:0.75rem;">Is the gate actually open or closed?</p>
-                <div style="display:flex; gap:0.5rem;">
-                    <button id="report-open-btn" class="btn-report btn-report-open">✅ OPEN</button>
-                    <button id="report-closed-btn" class="btn-report btn-report-closed">🔴 CLOSED</button>
+            <div class="bg-white/5 border border-white/10 rounded-2xl p-5 mb-4 backdrop-blur-sm">
+                <p class="font-bold text-sm text-slate-200 mb-3 block">Is the gate actually open or closed?</p>
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="report-open-btn" class="py-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 font-bold text-sm transition-all active:scale-95">✅ OPEN</button>
+                    <button id="report-closed-btn" class="py-3 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 font-bold text-sm transition-all active:scale-95">🔴 CLOSED</button>
                 </div>
             </div>
 
-            <div style="margin-top:1.5rem; background:#fef3c7; padding:1rem; border-radius:12px;">
-                <p style="font-weight:500; font-size:0.875rem; margin-bottom:0.75rem;">Report Train Delay</p>
-                <div style="display:flex; gap:0.5rem; margin-bottom:0.75rem;">
-                    <input type="text" id="train-number" placeholder="Train # (e.g., 12345)" style="flex:1; padding:0.5rem; border:1px solid #e2e8f0; border-radius:8px; font-size:0.875rem;">
-                    <input type="number" id="delay-minutes" placeholder="Delay (min)" style="width:100px; padding:0.5rem; border:1px solid #e2e8f0; border-radius:8px; font-size:0.875rem;">
+            <div class="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 backdrop-blur-sm mb-4">
+                <p class="font-bold text-sm text-amber-200 mb-3 block">Report Train Delay</p>
+                <div class="flex gap-3 mb-3">
+                    <input type="text" id="train-number" placeholder="Train # (e.g. 12345)" class="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-amber-500/50 outline-none transition-colors">
+                    <input type="number" id="delay-minutes" placeholder="Delay (min)" class="w-24 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-amber-500/50 outline-none transition-colors">
                 </div>
-                <button id="report-delay-btn" class="btn-report" style="width:100%; background:#f59e0b;">Submit Delay</button>
+                <button id="report-delay-btn" class="w-full py-2.5 rounded-lg bg-amber-500 text-black font-bold text-sm shadow-lg shadow-amber-500/20 hover:bg-amber-400 active:scale-95 transition-all">Submit Delay</button>
             </div>
 
-            <div style="margin-top:1rem;">
-                <p style="font-size:0.75rem; color:#94a3b8;">Points: ${CrowdService.getUserStats().points} | Level ${CrowdService.getUserStats().level}</p>
+            <div class="mt-4 text-center">
+                <p class="text-xs font-medium text-slate-500">Points: ${CrowdService.getUserStats().points} | Level ${CrowdService.getUserStats().level}</p>
             </div>
         `;
 

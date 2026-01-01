@@ -177,7 +177,7 @@ async function loadStats() {
 
 // Load Pending Gates
 async function loadPendingGates() {
-    gatesList.innerHTML = '<div class="p-8 text-center"><div class="spinner"></div></div>';
+    gatesList.innerHTML = '<div class="p-12 text-center text-slate-400 font-medium"><div class="spinner border-slate-400 border-t-white"></div></div>';
 
     const { data: gates, error } = await supabase
         .from('gates')
@@ -187,38 +187,46 @@ async function loadPendingGates() {
 
     if (error) {
         console.error('Error fetching gates:', error);
-        gatesList.innerHTML = '<div class="p-8 text-center text-red-500">Error loading gates</div>';
+        gatesList.innerHTML = '<div class="p-8 text-center text-rose-400 font-medium bg-rose-500/10 rounded-xl border border-rose-500/20">Error loading gates</div>';
         return;
     }
 
     if (!gates || gates.length === 0) {
-        gatesList.innerHTML = '<div class="p-8 text-center text-gray-500">No pending gates found</div>';
+        gatesList.innerHTML = `
+            <div class="p-12 text-center text-slate-400 flex flex-col items-center justify-center">
+                <svg class="w-12 h-12 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <p class="font-medium">All caught up! No pending gates.</p>
+            </div>
+        `;
         return;
     }
 
     gatesList.innerHTML = gates.map(gate => `
-        <div class="gate-row">
+        <div class="glass-btn p-5 rounded-xl flex items-center justify-between group hover:bg-white/10 active:scale-[0.99] transition-all mb-3 text-white">
             <div>
-                <h3 class="font-bold text-gray-800">${gate.name || 'Unnamed Gate'}</h3>
-                <p class="text-sm text-gray-500">
-                    Station: ${gate.stations?.name} (${gate.station_code}) • 
-                    City: ${gate.stations?.city}
+                <h3 class="font-bold text-lg text-white mb-1">${gate.name || 'Unnamed Gate'}</h3>
+                <p class="text-sm text-slate-300">
+                    <span class="font-medium text-slate-200">${gate.stations?.name}</span> (${gate.station_code}) • 
+                    <span class="text-slate-400">${gate.stations?.city}</span>
                 </p>
-                <p class="text-xs text-gray-400 mt-1">
-                    Submitted: ${new Date(gate.created_at).toLocaleDateString()}
+                <p class="text-xs text-slate-500 mt-2 flex items-center gap-1 font-medium bg-black/20 inline-block px-2 py-1 rounded">
+                    🗓️ ${new Date(gate.created_at).toLocaleDateString()}
                 </p>
             </div>
             <div class="flex gap-2">
                 <button onclick="window.open('https://www.google.com/maps?q=${gate.lat},${gate.lng}', '_blank')" 
-                    class="px-3 py-1 text-sm border rounded text-gray-600 hover:bg-gray-50">
-                    Map
+                    class="px-4 py-2 text-sm border border-white/20 rounded-lg text-slate-300 hover:bg-white/10 hover:text-white transition-colors font-medium">
+                    View Map
                 </button>
                 <button onclick="window.approveGate('${gate.id}')" 
-                    class="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200">
+                    class="px-4 py-2 text-sm bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-lg hover:bg-emerald-500/30 font-bold transition-colors">
                     Approve
                 </button>
                 <button onclick="window.rejectGate('${gate.id}')" 
-                    class="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200">
+                    class="px-4 py-2 text-sm bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-lg hover:bg-rose-500/30 font-bold transition-colors">
                     Reject
                 </button>
             </div>
