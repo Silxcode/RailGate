@@ -1,50 +1,72 @@
+```javascript
 /**
  * Service to manage railway gate data
  */
+import { supabase } from './supabase.js';
+
 const GateService = {
-    railwayTracks: [],
+    // Cache for gates data
+    _gatesCache: new Map(),
+    railwayTracks: [], // Keep this from original
 
     async fetchGatesNearStation(station) {
-        console.log(`�� Fetching gates for ${station.name} (${station.code})`);
-        
-        const cacheKey = `gates_${station.code}`;
+        if (!station || !station.lat || !station.lng) {
+            console.error('Invalid station data for gate fetch');
+            return [];
+        }
+
+        const cacheKey = `gates_${ station.code } `;
+
+        // 1. Try Cache
+        // Assuming CacheService is available globally or imported elsewhere
+        // For now, using the original GateService's cache methods
         const cached = this.getFromCache(cacheKey);
-        
         if (cached) {
-            console.log(`✅ Using cached gates for ${station.code}`);
-            this.railwayTracks = cached.tracks || [];
+            console.log(`📦 Using cached gates for ${ station.name }`);
+            this.railwayTracks = cached.tracks || []; // Update tracks from cache
             return cached.gates;
         }
 
-        // Try OSM first
-        let osmGates = await this.fetchFromOSM(station);
+        // 2. Fetch from OSM and Supabase in parallel
+        console.log(`📡 Fetching gates for ${ station.name } from APIs...`);
         
-        // If OSM returns 0 gates, use fallback
-        if (osmGates.length === 0) {
-            console.log(`⚠️ OSM returned 0 gates, using fallback for ${station.code}`);
-            osmGates = this.getFallbackGates(station.code);
-        }
+        try {
+            // Renamed fetchFromOSM to fetchFromOverpass as per new logic
+            const [osmGates, supabaseGates] = await Promise.all([
+                this.fetchFromOverpass(station), // Pass station object
+                this.fetchFromSupabase(station.code)
+            ]);
 
-        // Add crowdsourced gates
-        const crowdGates = CrowdService.getApprovedGates(station.code);
-        const allGates = [...osmGates, ...crowdGates];
-        
-        this.saveToCache(cacheKey, { gates: allGates, tracks: this.railwayTracks });
-        console.log(`📍 Total gates: ${allGates.length} (${osmGates.length} OSM + ${crowdGates.length} crowd)`);
-        
-        return allGates;
+            // 3. Merge results (Supabase gates take precedence if needed, but here we just append)
+            // We could also dedup based on location if needed
+            const allGates = [...osmGates, ...supabaseGates];
+
+            console.log(`📍 Total gates: ${ allGates.length } (${ osmGates.length } OSM + ${ supabaseGates.length } crowd)`);
+
+            // 4. Save to Cache
+            if (allGates.length > 0) {
+                this.saveToCache(cacheKey, { gates: allGates, tracks: this.railwayTracks });
+            }
+
+            return allGates;
+
+        } catch (error) {
+            console.error('Error fetching gates:', error);
+            // Fallback
+            return this.getFallbackGates(station.code);
+        }
     },
 
-    async fetchFromOSM(station) {
+    async fetchFromOverpass(station) { // Renamed from fetchFromOSM
         const radius = 5000;
         const query = `
-            [out:json][timeout:25];
-            (
-              node["railway"="level_crossing"](around:${radius}, ${station.lat}, ${station.lng});
-              way["railway"="rail"](around:${radius}, ${station.lat}, ${station.lng});
+[out:json][timeout: 25];
+(
+    node["railway" = "level_crossing"](around: ${ radius }, ${ station.lat }, ${ station.lng });
+way["railway" = "rail"](around: ${ radius }, ${ station.lat }, ${ station.lng });
             );
             out geom;
-        `;
+`;
 
         try {
             const response = await fetch('https://overpass-api.de/api/interpreter', {
@@ -61,8 +83,8 @@ const GateService = {
             this.railwayTracks = tracks;
             
             return gates.map((gate, i) => ({
-                id: `osm_${gate.id}`,
-                name: gate.tags?.name || `Gate #${i + 1}`,
+                id: `osm_${ gate.id } `,
+                name: gate.tags?.name || `Gate #${ i + 1 } `,
                 lat: gate.lat,
                 lng: gate.lon,
                 source: 'osm',
