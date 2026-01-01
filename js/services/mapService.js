@@ -6,6 +6,23 @@ const MapService = {
     markers: [],
 
     init(elementId, center, zoom) {
+        // Reuse existing map if already initialized
+        if (this.map) {
+            console.log('♻️ Reusing existing map');
+            // Clear markers
+            this.map.eachLayer((layer) => {
+                if (layer._url && layer._url.includes('openstreetmap')) {
+                    // Keep tile layer
+                } else {
+                    this.map.removeLayer(layer);
+                }
+            });
+            // Recenter
+            this.map.setView(center, zoom);
+            return this.map;
+        }
+
+        console.log('🗺️ Creating new map');
         this.map = L.map(elementId, {
             zoomControl: true,
             attributionControl: false
