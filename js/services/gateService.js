@@ -15,7 +15,7 @@ const GateService = {
             return [];
         }
 
-        const cacheKey = `gates_${ station.code } `;
+        const cacheKey = 'gates_' + station.code;
 
         // 1. Try Cache
         // Assuming CacheService is available globally or imported elsewhere
