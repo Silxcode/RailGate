@@ -1,6 +1,6 @@
 # RailGate - Gitignore
 config.local.js
-*.local.js
+.local.js
 .env
 .env.local
 node_modules/
