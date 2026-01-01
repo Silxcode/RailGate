@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RailGate Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .login-card {
+            max-width: 400px;
+            margin: 4rem auto;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .gate-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: white;
+            border-bottom: 1px solid #eee;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .status-badge.pending {
+            background: #fef9c3;
+            color: #854d0e;
+        }
+
+        .status-badge.approved {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-badge.rejected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="auth-check" class="loading-container">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="screen hidden">
+        <div class="login-card">
+            <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Admin Login</h2>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="email" required class="search-input w-full">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" id="password" required class="search-input w-full">
+                </div>
+                <button type="submit" class="search-btn w-full">Sign In</button>
+            </form>
+            <div id="login-error" class="text-red-500 text-sm mt-4 hidden text-center"></div>
+        </div>
+    </div>
+
+    <!-- Dashboard Screen -->
+    <div id="dashboard-screen" class="screen hidden">
+        <header class="bg-indigo-600 text-white shadow-lg">
+            <div class="admin-container py-4 flex justify-between items-center">
+                <h1 class="text-xl font-bold">RailGate Admin</h1>
+                <button id="logout-btn" class="bg-indigo-700 px-4 py-2 rounded-lg hover:bg-indigo-800">Logout</button>
+            </div>
+        </header>
+
+        <main class="admin-container">
+            <!-- Stats -->
+            <div class="dashboard-grid mb-8">
+                <div class="stat-card">
+                    <h3 class="text-gray-500 text-sm uppercase">Pending Gates</h3>
+                    <p class="text-3xl font-bold text-indigo-600" id="stat-pending">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3 class="text-gray-500 text-sm uppercase">Total Stations</h3>
+                    <p class="text-3xl font-bold text-indigo-600" id="stat-stations">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3 class="text-gray-500 text-sm uppercase">Total Users</h3>
+                    <p class="text-3xl font-bold text-indigo-600" id="stat-users">0</p>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="p-4 border-b flex justify-between items-center">
+                    <h2 class="text-lg font-bold">Pending Approvals</h2>
+                    <button id="refresh-btn" class="text-indigo-600 hover:text-indigo-800">Refresh</button>
+                </div>
+                <div id="gates-list" class="divide-y divide-gray-100">
+                    <div class="p-8 text-center text-gray-500">No pending gates</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="/js/admin.js"></script>
+</body>
+
+</html>
