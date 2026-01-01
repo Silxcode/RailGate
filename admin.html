@@ -10,64 +10,22 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/styles.css">
     <style>
-        .admin-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
+        /* Custom scrollbar for glassmorphism */
+        ::-webkit-scrollbar {
+            width: 8px;
         }
 
-        .login-card {
-            max-width: 400px;
-            margin: 4rem auto;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        ::-webkit-scrollbar-track {
+            background: transparent;
         }
 
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-top: 2rem;
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
         }
 
-        .stat-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .gate-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem;
-            background: white;
-            border-bottom: 1px solid #eee;
-        }
-
-        .status-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-
-        .status-badge.pending {
-            background: #fef9c3;
-            color: #854d0e;
-        }
-
-        .status-badge.approved {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .status-badge.rejected {
-            background: #fee2e2;
-            color: #991b1b;
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
         }
     </style>
 </head>
@@ -78,32 +36,32 @@
     </div>
 
     <!-- Login Screen -->
-    <div id="login-screen" class="screen hidden"
-        style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center;">
-        <div class="login-card"
-            style="margin: 0; width: 100%; max-width: 420px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); border-radius: 20px; padding: 3rem 2.5rem; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+    <!-- Login Screen -->
+    <div id="login-screen"
+        class="screen hidden min-h-screen bg-gradient-to-br from-primary-dark via-primary to-secondary flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-md p-8 rounded-2xl animate-[float_6s_ease-in-out_infinite]">
 
             <div class="text-center mb-10">
                 <div
-                    style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); width: 64px; height: 64px; border-radius: 16px; margin: 0 auto 1.5rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);">
+                    class="bg-gradient-to-br from-primary to-secondary w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg shadow-indigo-500/30">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"
                         stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                     </svg>
                 </div>
-                <h2 class="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h2>
-                <p class="text-gray-500 text-sm">Sign in to manage RailGate India</p>
+                <h2 class="text-3xl font-bold text-slate-800 mb-2">Welcome Back</h2>
+                <p class="text-slate-500 text-sm font-medium">Sign in to manage RailGate India</p>
             </div>
 
             <form id="login-form" class="space-y-6">
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Email
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Email
                         Address</label>
                     <div class="relative">
                         <input type="email" id="email" required
-                            class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-gray-700"
+                            class="input-glass w-full px-4 py-3 rounded-xl pl-10 text-slate-700 font-medium"
                             placeholder="admin@railgate.in">
-                        <svg class="absolute right-4 top-3.5 text-gray-400" width="20" height="20" viewBox="0 0 24 24"
+                        <svg class="absolute left-3 top-3.5 text-slate-400" width="20" height="20" viewBox="0 0 24 24"
                             fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z">
                             </path>
@@ -113,12 +71,13 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Password</label>
+                    <label
+                        class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Password</label>
                     <div class="relative">
                         <input type="password" id="password" required
-                            class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-gray-700"
+                            class="input-glass w-full px-4 py-3 rounded-xl pl-10 text-slate-700 font-medium"
                             placeholder="••••••••">
-                        <svg class="absolute right-4 top-3.5 text-gray-400" width="20" height="20" viewBox="0 0 24 24"
+                        <svg class="absolute left-3 top-3.5 text-slate-400" width="20" height="20" viewBox="0 0 24 24"
                             fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
@@ -127,28 +86,28 @@
                 </div>
 
                 <button type="submit"
-                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-600/30 transform transition-all hover:-translate-y-0.5 active:translate-y-0 active:shadow-none">
+                    class="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-500/30 transform transition-all hover:-translate-y-0.5 active:translate-y-0 active:shadow-none">
                     Access Dashboard
                 </button>
             </form>
 
             <div id="login-error"
-                class="mt-6 p-4 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100 hidden text-center font-medium">
+                class="mt-6 p-4 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100 hidden text-center font-medium animate-pulse">
             </div>
 
-            <p class="text-center mt-8 text-xs text-gray-400">
+            <p class="text-center mt-8 text-xs text-slate-400 font-medium">
                 &copy; 2024 RailGate India. Secure Admin Portal.
             </p>
         </div>
     </div>
 
     <!-- Dashboard Screen -->
-    <div id="dashboard-screen" class="screen hidden bg-gray-50 min-h-screen">
-        <header style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);"
-            class="text-white shadow-lg sticky top-0 z-50">
-            <div class="admin-container py-4 flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <div class="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+    <div id="dashboard-screen" class="screen hidden bg-slate-50 min-h-screen">
+        <header
+            class="bg-gradient-to-r from-primary-dark via-primary to-secondary text-white shadow-lg sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <div class="glass-btn p-2 rounded-xl">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -159,37 +118,58 @@
                         <p class="text-xs text-white/80 font-medium">Moderation Center</p>
                     </div>
                 </div>
-                <button id="logout-btn"
-                    class="bg-white/10 hover:bg-white/20 text-white px-5 py-2.5 rounded-lg transition-all text-sm font-semibold border border-white/20">Sign
-                    Out</button>
+                <!-- Buttons group -->
+                <div class="flex gap-2">
+                    <button id="import-btn" class="glass-btn px-4 py-2 rounded-lg text-sm font-semibold">
+                        Import Stations (JSON)
+                    </button>
+                    <button id="logout-btn"
+                        class="glass-btn px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-500/20 hover:border-red-500/30">
+                        Sign Out
+                    </button>
+                </div>
             </div>
         </header>
 
-        <main class="admin-container">
+        <main class="max-w-7xl mx-auto px-4 py-8">
             <!-- Stats -->
-            <div class="dashboard-grid mb-8">
-                <div class="stat-card">
-                    <h3 class="text-gray-500 text-sm uppercase">Pending Gates</h3>
-                    <p class="text-3xl font-bold text-indigo-600" id="stat-pending">0</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="glass-panel p-6 rounded-2xl border-l-4 border-indigo-500">
+                    <h3 class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Pending Gates</h3>
+                    <p class="text-4xl font-bold text-slate-800" id="stat-pending">0</p>
                 </div>
-                <div class="stat-card">
-                    <h3 class="text-gray-500 text-sm uppercase">Total Stations</h3>
-                    <p class="text-3xl font-bold text-indigo-600" id="stat-stations">0</p>
+                <div class="glass-panel p-6 rounded-2xl border-l-4 border-violet-500">
+                    <h3 class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Total Stations</h3>
+                    <p class="text-4xl font-bold text-slate-800" id="stat-stations">0</p>
                 </div>
-                <div class="stat-card">
-                    <h3 class="text-gray-500 text-sm uppercase">Total Users</h3>
-                    <p class="text-3xl font-bold text-indigo-600" id="stat-users">0</p>
+                <div class="glass-panel p-6 rounded-2xl border-l-4 border-amber-500">
+                    <h3 class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Total Users</h3>
+                    <p class="text-4xl font-bold text-slate-800" id="stat-users">0</p>
                 </div>
             </div>
 
             <!-- Content -->
-            <div class="bg-white rounded-lg shadow overflow-hidden">
-                <div class="p-4 border-b flex justify-between items-center">
-                    <h2 class="text-lg font-bold">Pending Approvals</h2>
-                    <button id="refresh-btn" class="text-indigo-600 hover:text-indigo-800">Refresh</button>
+            <div class="glass-panel rounded-2xl overflow-hidden">
+                <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-white/50">
+                    <h2 class="text-lg font-bold text-slate-800">Pending Approvals</h2>
+                    <button id="refresh-btn"
+                        class="text-primary hover:text-primary-dark font-semibold text-sm transition-colors flex items-center gap-2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M23 4v6h-6"></path>
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                        </svg>
+                        Refresh
+                    </button>
                 </div>
-                <div id="gates-list" class="divide-y divide-gray-100">
-                    <div class="p-8 text-center text-gray-500">No pending gates</div>
+                <div id="gates-list" class="divide-y divide-slate-100 min-h-[200px]">
+                    <div class="p-12 text-center text-slate-400 flex flex-col items-center justify-center">
+                        <svg class="w-12 h-12 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <p class="font-medium">All caught up! No pending gates.</p>
+                    </div>
                 </div>
             </div>
         </main>

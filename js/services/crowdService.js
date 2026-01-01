@@ -2,6 +2,7 @@ import { supabase } from './supabase.js';
 
 const CrowdService = {
     user: null, // Supabase user
+    delayReports: [], // Local storage for delay reports
     userStats: {
         totalReports: 0,
         points: 0, // In future, fetch from 'profiles'
@@ -106,10 +107,22 @@ const CrowdService = {
         setTimeout(() => toast.remove(), 3000);
     },
 
+    getUserStats() {
+        return this.userStats;
+    },
+
     // Legacy/Stub methods
     submitClosureDuration() { /* ... */ },
     getRecentReports() { return []; },
-    submitDelayReport() { /* ... */ }
+    /**
+     * Submit a train delay report (crowdsourcing)
+     */
+    submitDelayReport(report) {
+        this.delayReports.push(report);
+        this.updateUserStats(20); // 20 points for delay reports
+        console.log('Delay report submitted:', report);
+        this.showThankYouNotification('Delay Report', 'submitted');
+    }
 };
 
 window.CrowdService = CrowdService;

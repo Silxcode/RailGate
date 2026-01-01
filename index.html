@@ -24,15 +24,20 @@
 
 <body>
     <!-- App Header -->
-    <header class="app-header">
-        <button id="back-btn" class="icon-btn hidden">
+    <!-- App Header -->
+    <header
+        class="fixed top-0 w-full z-50 px-4 py-3 flex items-center justify-between bg-white/10 backdrop-blur-md border-b border-white/20 shadow-sm transition-all duration-300"
+        id="main-header">
+        <button id="back-btn" class="p-2 rounded-xl bg-white/20 text-slate-700 hover:bg-white/40 transition-all hidden">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
                 stroke-linecap="round" stroke-linejoin="round">
                 <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
         </button>
-        <h1 id="app-title">RailGate India</h1>
-        <button id="add-gate-btn" class="icon-btn hidden">
+        <h1 id="app-title" class="flex-1 text-center font-bold text-lg text-slate-800 tracking-tight">RailGate India
+        </h1>
+        <button id="add-gate-btn"
+            class="p-2 rounded-xl bg-gradient-to-r from-primary to-secondary text-white shadow-lg hover:shadow-primary/40 transition-all transform active:scale-95 hidden">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
                 stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 5v14M5 12h14" />
@@ -42,71 +47,109 @@
 
 
     <!-- City Search Screen -->
-    <div id="city-search-screen" class="screen">
-        <div class="container">
-            <h2 style="text-align: center; margin: 2rem 0 1rem;">Select Your City</h2>
-
-            <div class="search-box">
-                <input type="text" id="city-search-input" placeholder="Search city (e.g., Mumbai, Delhi, Bangalore)"
-                    autocomplete="off">
+    <!-- City Search Screen -->
+    <div id="city-search-screen" class="screen pt-20 px-4 min-h-screen bg-slate-50">
+        <div class="max-w-md mx-auto">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">Find Your City</h2>
+                <p class="text-slate-500 text-sm">Search for live railway gate status</p>
             </div>
 
-            <div id="city-results" style="margin-top: 1rem;"></div>
+            <div class="relative mb-8">
+                <input type="text" id="city-search-input"
+                    class="input-glass w-full px-5 py-4 rounded-2xl pl-12 text-lg shadow-sm"
+                    placeholder="Search city (e.g., Mumbai, Delhi)" autocomplete="off">
+                <svg class="absolute left-4 top-4.5 text-slate-400" width="24" height="24" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </div>
 
-            <div style="margin-top: 2rem;">
-                <h3 style="font-size: 0.875rem; color: #64748b; margin-bottom: 1rem;">🔥 Popular Cities</h3>
-                <div id="popular-cities" class="grid-2"></div>
+            <div id="city-results" class="space-y-3"></div>
+
+            <div class="mt-8">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Popular Cities</h3>
+                <div id="popular-cities" class="grid grid-cols-2 gap-3"></div>
             </div>
         </div>
     </div>
 
     <!-- Station Selection Screen -->
-    <div id="station-screen" class="screen hidden">
-        <div class="container">
-            <h2 id="station-city-name" style="margin: 1.5rem 0;">Station in Stations</h2>
-            <div id="station-list"></div>
+    <!-- Station Selection Screen -->
+    <div id="station-screen" class="screen hidden pt-20 px-4 min-h-screen bg-slate-50">
+        <div class="max-w-md mx-auto">
+            <h2 id="station-city-name"
+                class="text-xl font-bold text-slate-800 mb-6 sticky top-20 bg-slate-50 py-2 z-10">Stations</h2>
+            <div id="station-list" class="space-y-3 pb-20"></div>
         </div>
     </div>
 
     <!-- Gates Screen (Map + List) -->
-    <div id="gates-screen" class="screen hidden">
-        <div id="map"></div>
+    <!-- Gates Screen (Map + List) -->
+    <div id="gates-screen" class="screen hidden relative h-screen w-full overflow-hidden">
+        <div id="map" class="absolute inset-0 z-0"></div>
 
-        <div class="bottom-sheet">
-            <div class="handle"></div>
-
-            <!-- Gate List View -->
-            <div id="gate-list-view">
-                <div class="section-header">
-                    <h2>Nearby Gates</h2>
-                    <span id="gate-count">Finding...</span>
+        <div class="absolute bottom-0 left-0 right-0 z-20">
+            <div class="glass-panel rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] transition-transform duration-300 max-h-[85vh] flex flex-col"
+                id="bottom-sheet">
+                <!-- Handle -->
+                <div class="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mt-3 mb-1 cursor-grab active:cursor-grabbing">
                 </div>
-                <div id="gate-list"></div>
-            </div>
 
-            <!-- Gate Detail View -->
-            <div id="gate-detail-view" class="hidden">
-                <button id="back-to-list" class="btn-text">← Back</button>
-                <div id="gate-details"></div>
+                <!-- Gate List View -->
+                <div id="gate-list-view" class="p-5 flex flex-col h-full overflow-hidden">
+                    <div class="flex justify-between items-baseline mb-4 shrink-0">
+                        <h2 class="text-lg font-bold text-slate-800">Nearby Gates</h2>
+                        <span id="gate-count" class="text-sm font-medium text-slate-500">Finding...</span>
+                    </div>
+                    <div id="gate-list" class="space-y-3 overflow-y-auto pb-8 custom-scrollbar"></div>
+                </div>
+
+                <!-- Gate Detail View -->
+                <div id="gate-detail-view" class="hidden p-5 h-full overflow-y-auto">
+                    <button id="back-to-list"
+                        class="text-primary font-semibold text-sm mb-4 flex items-center gap-1 hover:underline">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 12H5M12 19l-7-7 7-7" />
+                        </svg>
+                        Back to List
+                    </button>
+                    <div id="gate-details"></div>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Add Gate Modal -->
-    <div id="add-gate-modal" class="modal hidden">
-        <div class="modal-content">
-            <h3>Add New Gate</h3>
-            <input type="text" id="new-gate-name" placeholder="Gate name" class="input-field">
-            <div class="modal-actions">
-                <button id="cancel-add-gate" class="btn-secondary">Cancel</button>
-                <button id="confirm-add-gate" class="btn-primary">Submit</button>
+    <!-- Add Gate Modal -->
+    <div id="add-gate-modal"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm transform transition-all scale-95 duration-200"
+            id="add-gate-content">
+            <h3 class="text-xl font-bold text-slate-800 mb-4">Add New Gate</h3>
+            <input type="text" id="new-gate-name" placeholder="Gate name (e.g. LC-45)"
+                class="input-glass w-full px-4 py-3 rounded-xl mb-6 text-slate-700">
+            <div class="flex gap-3">
+                <button id="cancel-add-gate"
+                    class="flex-1 py-3 rounded-xl bg-slate-100 text-slate-700 font-semibold hover:bg-slate-200 transition-colors">Cancel</button>
+                <button id="confirm-add-gate"
+                    class="flex-1 py-3 rounded-xl bg-primary text-white font-bold shadow-lg shadow-primary/30 hover:bg-primary-dark transition-colors">Submit</button>
             </div>
         </div>
     </div>
 
     <!-- Toast Overlay -->
-    <div id="voice-overlay" class="voice-overlay hidden">
-        <p id="voice-text"></p>
+    <!-- Toast Overlay -->
+    <div id="voice-overlay"
+        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-900/90 backdrop-blur-md text-white px-8 py-6 rounded-2xl text-center shadow-2xl z-[100] hidden flex flex-col items-center">
+        <div class="flex gap-1 h-6 items-end mb-4 justify-center">
+            <div class="w-1 bg-primary h-3 animate-[dance_1s_ease-in-out_infinite]"></div>
+            <div class="w-1 bg-primary h-6 animate-[dance_1.2s_ease-in-out_infinite]"></div>
+            <div class="w-1 bg-primary h-4 animate-[dance_0.8s_ease-in-out_infinite]"></div>
+        </div>
+        <p id="voice-text" class="font-medium text-lg"></p>
     </div>
 
     <!-- Scripts -->
