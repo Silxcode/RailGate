@@ -1,4 +1,3 @@
-```javascript
 /**
  * Service to manage railway gate data
  */
@@ -22,14 +21,14 @@ const GateService = {
         // For now, using the original GateService's cache methods
         const cached = this.getFromCache(cacheKey);
         if (cached) {
-            console.log(`📦 Using cached gates for ${ station.name }`);
+            console.log(`Using cached gates for ${station.name}`);
             this.railwayTracks = cached.tracks || []; // Update tracks from cache
             return cached.gates;
         }
 
         // 2. Fetch from OSM and Supabase in parallel
-        console.log(`📡 Fetching gates for ${ station.name } from APIs...`);
-        
+        console.log(`Fetching gates for ${station.name} from APIs...`);
+
         try {
             // Renamed fetchFromOSM to fetchFromOverpass as per new logic
             const [osmGates, supabaseGates] = await Promise.all([
@@ -41,7 +40,7 @@ const GateService = {
             // We could also dedup based on location if needed
             const allGates = [...osmGates, ...supabaseGates];
 
-            console.log(`📍 Total gates: ${ allGates.length } (${ osmGates.length } OSM + ${ supabaseGates.length } crowd)`);
+            console.log(`Total gates: ${allGates.length} (${osmGates.length} OSM + ${supabaseGates.length} crowd)`);
 
             // 4. Save to Cache
             if (allGates.length > 0) {
@@ -57,34 +56,59 @@ const GateService = {
         }
     },
 
-    async fetchFromOverpass(station) { // Renamed from fetchFromOSM
+    async fetchFromSupabase(stationCode) {
+        try {
+            const { data, error } = await supabase
+                .from('gates')
+                .select('*')
+                .eq('station_code', stationCode)
+                .eq('status', 'approved');
+
+            if (error) throw error;
+
+            // Transform to match app format if needed
+            return data.map(g => ({
+                id: g.id,
+                name: g.name,
+                lat: g.lat,
+                lng: g.lng,
+                type: 'crossing',
+                source: 'crowd'
+            }));
+        } catch (err) {
+            console.warn('Supabase fetch failed:', err.message);
+            return [];
+        }
+    },
+
+    async fetchFromOSM(station) {
         const radius = 5000;
         const query = `
-[out:json][timeout: 25];
-(
-    node["railway" = "level_crossing"](around: ${ radius }, ${ station.lat }, ${ station.lng });
-way["railway" = "rail"](around: ${ radius }, ${ station.lat }, ${ station.lng });
+            [out:json][timeout:25];
+            (
+              node["railway"="level_crossing"](around:${radius}, ${station.lat}, ${station.lng});
+              way["railway"="rail"](around:${radius}, ${station.lat}, ${station.lng});
             );
             out geom;
-`;
+        `;
 
         try {
             const response = await fetch('https://overpass-api.de/api/interpreter', {
                 method: 'POST',
                 body: 'data=' + encodeURIComponent(query)
             });
-            
+
             if (!response.ok) throw new Error('OSM fetch failed');
-            
+
             const data = await response.json();
             const gates = data.elements.filter(el => el.type === 'node');
             const tracks = data.elements.filter(el => el.type === 'way');
-            
+
             this.railwayTracks = tracks;
-            
+
             return gates.map((gate, i) => ({
-                id: `osm_${ gate.id } `,
-                name: gate.tags?.name || `Gate #${ i + 1 } `,
+                id: `osm_${gate.id}`,
+                name: gate.tags?.name || `Gate #${i + 1}`,
                 lat: gate.lat,
                 lng: gate.lon,
                 source: 'osm',
@@ -118,7 +142,7 @@ way["railway" = "rail"](around: ${ radius }, ${ station.lat }, ${ station.lng })
 
     isPointNearTrack(lat, lng, threshold = 0.0003) {
         if (this.railwayTracks.length === 0) return true;
-        
+
         return this.railwayTracks.some(track => {
             if (!track.geometry) return false;
             return track.geometry.some(point => {
@@ -133,9 +157,9 @@ way["railway" = "rail"](around: ${ radius }, ${ station.lat }, ${ station.lng })
             const cached = localStorage.getItem(key);
             if (!cached) return null;
             const { data, timestamp } = JSON.parse(cached);
-            if (Date.now() - timestamp < 24*60*60*1000) return data;
+            if (Date.now() - timestamp < 24 * 60 * 60 * 1000) return data;
             localStorage.removeItem(key);
-        } catch {}
+        } catch { }
         return null;
     },
 
