@@ -19,6 +19,10 @@ const MapService = {
             });
             // Recenter
             this.map.setView(center, zoom);
+            // CRITICAL: Invalidate size after container might have been hidden/shown
+            setTimeout(() => {
+                this.map.invalidateSize();
+            }, 100);
             return this.map;
         }
 
