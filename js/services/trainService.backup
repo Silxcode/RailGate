@@ -1,0 +1,196 @@
+/**
+ * Handles train schedule data for Belagavi (BGM)
+ * Data Sources: Rail Radar API + Crowdsourcing
+ */
+const TrainService = {
+    // Cache for API responses (30 min TTL - optimized for free tier)
+    _cache: {},
+    _cacheTTL: 30 * 60 * 1000, // 30 minutes (increased from 5)
+
+    // Rail Radar API config (placeholder - user needs API key)
+    RAILRADAR_API: 'https://api.railradar.in/api/v1',
+    API_KEY: null, // Set via CONFIG or localStorage
+
+    /**
+     * Fetch static schedules for Belagavi trains
+     */
+    async fetchSchedules() {
+        // Real Belagavi trains with station codes
+        return [
+            { number: "17325", name: "Vishwamanav Exp", arrivalAtBGM: "05:45", destination: "Mysuru", stationCode: "BGM" },
+            { number: "20653", name: "SBC BGM Exp", arrivalAtBGM: "06:50", destination: "Belagavi", stationCode: "BGM" },
+            { number: "11047", name: "Miraj Hubballi Exp", arrivalAtBGM: "14:15", destination: "Hubballi", stationCode: "BGM" },
+            { number: "06589", name: "Rani Chennamma", arrivalAtBGM: "18:30", destination: "SBC", stationCode: "BGM" },
+            { number: "20654", name: "BGM SBC Exp", arrivalAtBGM: "21:00", destination: "Bengaluru", stationCode: "BGM" },
+            { number: "12779", name: "Goa Express", arrivalAtBGM: "08:15", destination: "Vasco", stationCode: "BGM" },
+            { number: "17415", name: "Haripriya Exp", arrivalAtBGM: "10:30", destination: "Tirupati", stationCode: "BGM" }
+        ];
+    },
+
+    /**
+     * Get live train status from Rail Radar API + Crowdsource fallback
+     * @param {string} trainNumber - Train number (e.g., "17325")
+     * @returns {Promise<{isDelayed: boolean, delayMinutes: number, source: string, lastUpdate: Date}>}
+     */
+    async getLiveStatus(trainNumber) {
+        // 1. Check cache first
+        const cached = this._getFromCache(trainNumber);
+        if (cached) {
+            return cached;
+        }
+
+        // 2. Check crowdsourced delay reports
+        const crowdDelay = this._getCrowdsourcedDelay(trainNumber);
+        if (crowdDelay) {
+            this._setCache(trainNumber, crowdDelay);
+            return crowdDelay;
+        }
+
+        // 3. Try Rail Radar API
+        try {
+            const apiData = await this._fetchFromRailRadar(trainNumber);
+            if (apiData) {
+                this._setCache(trainNumber, apiData);
+                return apiData;
+            }
+        } catch (error) {
+            console.warn('Rail Radar API error:', error.message);
+        }
+
+        // 4. Fallback to no delay (schedule-based)
+        return { isDelayed: false, delayMinutes: 0, source: 'schedule', lastUpdate: new Date() };
+    },
+
+    /**
+     * Fetch from Rail Radar API
+     */
+    async _fetchFromRailRadar(trainNumber) {
+        const apiKey = this.API_KEY || CONFIG.RAILRADAR_API_KEY || localStorage.getItem('railradar_api_key');
+
+        if (!apiKey) {
+            console.log('Rail Radar API key not set. Using schedule-based predictions.');
+            return null;
+        }
+
+        const url = `${this.RAILRADAR_API}/trains/${trainNumber}`;
+
+        const response = await fetch(url, {
+            headers: {
+                'Accept': 'application/json',
+                'X-API-Key': apiKey,  // Rail Radar uses header-based auth
+                'User-Agent': 'RailGate/1.0 (Belagavi Railway Gate App)'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Rail Radar API returned ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Parse Rail Radar response format
+        if (data.success && data.data && data.data.liveData) {
+            const liveData = data.data.liveData;
+            const metadata = data.data.metadata;
+
+            return {
+                isDelayed: liveData.overallDelayMinutes > 0,
+                delayMinutes: liveData.overallDelayMinutes || 0,
+                source: 'railradar',
+                lastUpdate: new Date(liveData.lastUpdatedAt),
+                currentStation: liveData.currentLocation?.stationCode || null,
+                nextStation: null,  // Can be derived from route if needed
+                dataSource: liveData.dataSource,  // 'OFFICIAL' or other
+                hasLiveData: metadata.hasLiveData
+            };
+        }
+
+        return null;
+    },
+
+    /**
+     * Check for crowdsourced delay reports
+     */
+    _getCrowdsourcedDelay(trainNumber) {
+        if (!window.CrowdService) return null;
+
+        const delayReports = CrowdService.getDelayReports(trainNumber);
+        if (delayReports && delayReports.length > 0) {
+            // Get most recent report within 15 minutes (reduced from 30)
+            const recent = delayReports.find(r =>
+                (Date.now() - new Date(r.timestamp).getTime()) < 15 * 60 * 1000
+            );
+
+            if (recent) {
+                return {
+                    isDelayed: recent.delayMinutes > 0,
+                    delayMinutes: recent.delayMinutes,
+                    source: 'crowdsource',
+                    lastUpdate: new Date(recent.timestamp),
+                    reportedBy: recent.userId
+                };
+            }
+        }
+        return null;
+    },
+
+    /**
+     * Submit a delay report (crowdsourcing)
+     */
+    submitDelayReport(trainNumber, delayMinutes) {
+        if (!window.CrowdService) {
+            console.error('CrowdService not available');
+            return false;
+        }
+
+        CrowdService.submitDelayReport({
+            trainNumber,
+            delayMinutes,
+            timestamp: new Date().toISOString(),
+            userId: CrowdService.getUserId()
+        });
+
+        // Invalidate cache for this train
+        delete this._cache[trainNumber];
+        return true;
+    },
+
+    /**
+     * Cache helpers
+     */
+    _getFromCache(trainNumber) {
+        const entry = this._cache[trainNumber];
+        if (entry && (Date.now() - entry.cachedAt) < this._cacheTTL) {
+            return entry.data;
+        }
+        return null;
+    },
+
+    _setCache(trainNumber, data) {
+        this._cache[trainNumber] = {
+            data,
+            cachedAt: Date.now()
+        };
+    },
+
+    /**
+     * Set API key at runtime
+     */
+    setApiKey(key) {
+        this.API_KEY = key;
+        localStorage.setItem('railradar_api_key', key);
+    }
+        this.API_KEY = key;
+        localStorage.setItem('railradar_api_key', key);
+    },
+
+    /**
+     * Fetch train schedules for a station (simplified MVP)
+     */
+    async fetchSchedulesForStation(station) {
+        console.log(`ℹ️ No static schedules for ${station.code} (using Rail Radar only)`);
+        return [];
+    }
+};
+
+window.TrainService = TrainService;

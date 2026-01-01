@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RailGate | India Railway Gate Status</title>
+    <meta name="description"
+        content="Check live railway gate status across India. Crowdsourced and schedule-based predictions.">
+
+    <!-- PWA meta tags -->
+    <meta name="theme-color" content="#2c3e50">
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="css/styles.css">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Simple Header -->
+        <button id="back-btn" class="icon-btn hidden">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+        </button>
+        <button id="back-btn" class="icon-btn hidden">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+        </button>
+        <button id="back-btn" class="icon-btn hidden">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+        </button>
+        <button id="add-gate-btn" class="icon-btn hidden">+</button>
+    </header>
+
+    <!-- City Search Screen -->
+    <div id="city-search-screen" class="screen">
+        <div class="container">
+            <h2 style="text-align: center; margin: 2rem 0 1rem;">Select Your City</h2>
+
+            <div class="search-box">
+                <input type="text" id="city-search-input" placeholder="Search city (e.g., Mumbai, Delhi, Bangalore)"
+                    autocomplete="off">
+            </div>
+
+            <div id="city-results" style="margin-top: 1rem;"></div>
+
+            <div style="margin-top: 2rem;">
+                <h3 style="font-size: 0.875rem; color: #64748b; margin-bottom: 1rem;">🔥 Popular Cities</h3>
+                <div id="popular-cities" class="grid-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Station Selection Screen -->
+    <div id="station-screen" class="screen hidden">
+        <div class="container">
+            <h2 id="station-city-name" style="margin: 1.5rem 0;">Station in Stations</h2>
+            <div id="station-list"></div>
+        </div>
+    </div>
+
+    <!-- Gates Screen (Map + List) -->
+    <div id="gates-screen" class="screen hidden">
+        <div id="map"></div>
+
+        <div class="bottom-sheet">
+            <div class="handle"></div>
+
+            <!-- Gate List View -->
+            <div id="gate-list-view">
+                <div class="section-header">
+                    <h2>Nearby Gates</h2>
+                    <span id="gate-count">Finding...</span>
+                </div>
+                <div id="gate-list"></div>
+            </div>
+
+            <!-- Gate Detail View -->
+            <div id="gate-detail-view" class="hidden">
+                <button id="back-to-list" class="btn-text">← Back</button>
+                <div id="gate-details"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Gate Modal -->
+    <div id="add-gate-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Add New Gate</h3>
+            <input type="text" id="new-gate-name" placeholder="Gate name" class="input-field">
+            <div class="modal-actions">
+                <button id="cancel-add-gate" class="btn-secondary">Cancel</button>
+                <button id="confirm-add-gate" class="btn-primary">Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Overlay -->
+    <div id="voice-overlay" class="voice-overlay hidden">
+        <p id="voice-text"></p>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script type="module" src="js/config.js"></script>
+    <script src="js/services/cacheService.js"></script>
+    <script src="js/services/offlineService.js"></script>
+    <script src="js/services/mapService.js"></script>
+    <script src="js/services/gateService.js"></script>
+    <script src="js/services/trainService.js"></script>
+    <script src="js/services/statusPredictor.js"></script>
+    <script src="js/services/voiceService.js"></script>
+    <script src="js/services/crowdService.js"></script>
+    <script src="js/services/stationService.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>

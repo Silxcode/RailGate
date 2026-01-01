@@ -1,0 +1,58 @@
+/**
+ * Handles map rendering and interactions using Leaflet
+ */
+const MapService = {
+    map: null,
+    markers: [],
+
+    init(elementId, center, zoom) {
+        this.map = L.map(elementId, {
+            zoomControl: true,
+            attributionControl: false
+        }).setView(center, zoom);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+        }).addTo(this.map);
+
+        return this.map;
+    },
+
+    renderGates(gates, onGateClick) {
+        // Clear existing markers
+        this.markers.forEach(m => this.map.removeLayer(m));
+        this.markers = [];
+
+        gates.forEach(gate => {
+            const marker = L.marker([gate.lat, gate.lng], {
+                icon: this.createGateIcon('unknown')
+            }).addTo(this.map);
+
+            marker.on('click', () => onGateClick(gate));
+            this.markers.push(marker);
+        });
+    },
+
+    createGateIcon(status) {
+        const colors = {
+            'open': '#22c55e',
+            'closed': '#ef4444',
+            'warning': '#f59e0b',
+            'unknown': '#64748b'
+        };
+
+        return L.divIcon({
+            className: 'custom-gate-icon',
+            html: `<div style="background: ${colors[status]}; width: 14px; height: 14px; border: 2px solid white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+            iconSize: [14, 14],
+            iconAnchor: [7, 7]
+        });
+    },
+
+    updateMarkerStatus(gateId, status) {
+        // Find marker and update its color visually
+        // implementation to follow
+    }
+};
+
+window.MapService = MapService;
