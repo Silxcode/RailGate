@@ -5,4 +5,5 @@ config.local.js
 .env.local
 node_modules/
 dist/
+.md
 .DS_Store
