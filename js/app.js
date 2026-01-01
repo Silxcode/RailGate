@@ -43,6 +43,13 @@ const App = {
         const addBtn = document.getElementById('add-gate-btn');
         const title = document.getElementById('app-title');
 
+        // Safety check
+        if (!title || !backBtn || !addBtn) {
+            console.warn('Header elements not found, retrying...');
+            setTimeout(() => this.updateHeader(), 100);
+            return;
+        }
+
         // Show/hide back button
         if (this.currentScreen === 'city-search') {
             backBtn.classList.add('hidden');
