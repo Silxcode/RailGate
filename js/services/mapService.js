@@ -4,14 +4,15 @@
 const MapService = {
     map: null,
     markers: [],
+    tileLayer: null,  // Store tile layer reference
 
     init(elementId, center, zoom) {
         // Reuse existing map if already initialized
         if (this.map) {
             console.log('♻️ Reusing existing map');
-            // Clear markers
+            // Clear markers only (not the tile layer)
             this.map.eachLayer((layer) => {
-                if (layer._url && layer._url.includes('openstreetmap')) {
+                if (layer === this.tileLayer) {
                     // Keep tile layer
                 } else {
                     this.map.removeLayer(layer);
@@ -32,7 +33,7 @@ const MapService = {
             attributionControl: false
         }).setView(center, zoom);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        this.tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19
         }).addTo(this.map);
 
