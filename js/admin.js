@@ -87,6 +87,72 @@ refreshBtn.addEventListener('click', () => {
     loadPendingGates();
 });
 
+// Import Stations (One-time setup)
+async function importStations() {
+    if (!confirm('Import all stations from stations.json? This might take a while.')) return;
+
+    console.log('Fetching stations.json...');
+    try {
+        const response = await fetch('/data/stations.json');
+        const stations = await response.json();
+
+        console.log(`Loaded ${stations.length} stations. Starting import...`);
+
+        // Chunk params
+        const chunkSize = 100;
+        let imported = 0;
+        let errors = 0;
+
+        for (let i = 0; i < stations.length; i += chunkSize) {
+            const chunk = stations.slice(i, i + chunkSize).map(s => ({
+                code: s.code,
+                name: s.name,
+                city: s.city_name || s.city, // Handle extracted city format
+                state: s.state,
+                zone: s.zone,
+                lat: s.lat,
+                lng: s.lng
+            }));
+
+            const { error } = await supabase
+                .from('stations')
+                .upsert(chunk, { ignoreDuplicates: true });
+
+            if (error) {
+                console.error('Error importing chunk:', error);
+                errors += chunk.length;
+            } else {
+                imported += chunk.length;
+            }
+
+            // Progress update (optional UI feedback)
+            console.log(`Progress: ${imported}/${stations.length}`);
+        }
+
+        alert(`Import complete!\nSuccess: ${imported}\nErrors: ${errors}`);
+        loadStats();
+
+    } catch (err) {
+        console.error('Import failed:', err);
+        alert('Import failed. Check console.');
+    }
+}
+
+// Add Import Button to UI (Programmatically or in HTML)
+// For now, let's expose it globally so admin can call it from console or we add a button if needed.
+// Better: Add a button to the dashboard header.
+window.importStations = importStations;
+const headerParams = document.querySelector('.admin-container.py-4');
+if (headerParams) {
+    const importBtn = document.createElement('button');
+    importBtn.textContent = 'Import Stations (JSON)';
+    importBtn.className = 'ml-4 text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded';
+    importBtn.onclick = importStations;
+    headerParams.querySelector('div').appendChild(importBtn); // Append to title div or creating a toolbar?
+    // Let's just append to the flex container
+    headerParams.appendChild(importBtn);
+}
+
 // Load Statistics
 async function loadStats() {
     // Pending Gates
