@@ -251,19 +251,19 @@ const App = {
 
         countElement.innerText = `${gates.length} gates found`;
         listContainer.innerHTML = gates.length === 0
-            ? '<p class="text-center p-8 text-slate-400 font-medium">No gates found nearby</p>'
+            ? '<p class="text-center p-8 text-slate-500 font-medium">No gates found nearby</p>'
             : gates.map(gate => `
-                <div class="glass-btn gate-card p-4 rounded-xl flex justify-between items-center cursor-pointer group active:scale-95 transition-all border border-white/5 bg-white/5 hover:bg-white/10" data-id="${gate.id}">
+                <div class="glass-btn gate-card p-4 rounded-xl flex justify-between items-center cursor-pointer group active:scale-95 transition-all border border-slate-200/50 bg-white/50 hover:bg-white/80 shadow-sm" data-id="${gate.id}">
                     <div class="flex-1 pr-4">
-                        <h3 class="font-bold text-white text-base mb-1 group-hover:text-indigo-300 transition-colors">${gate.name}</h3>
-                        <p class="text-xs text-slate-300 font-medium flex items-center gap-1">
+                        <h3 class="font-bold text-slate-900 text-base mb-1 group-hover:text-indigo-700 transition-colors">${gate.name}</h3>
+                        <p class="text-xs text-slate-600 font-medium flex items-center gap-1">
                            ${gate.prediction.message}
                         </p>
                     </div>
                     <div class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider
-                        ${gate.prediction.status === 'open' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
-                    gate.prediction.status === 'closed' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' :
-                        'bg-amber-500/20 text-amber-300 border border-amber-500/30'}">
+                        ${gate.prediction.status === 'open' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
+                    gate.prediction.status === 'closed' ? 'bg-rose-100 text-rose-700 border border-rose-200' :
+                        'bg-amber-100 text-amber-700 border border-amber-200'}">
                         ${gate.prediction.status}
                     </div>
                 </div>
@@ -280,39 +280,39 @@ const App = {
         document.getElementById('gate-detail-view').classList.remove('hidden');
 
         document.getElementById('gate-details').innerHTML = `
-            <h2 class="text-2xl font-bold text-white mb-2">${gate.name}</h2>
+            <h2 class="text-2xl font-bold text-slate-900 mb-2">${gate.name}</h2>
             <div class="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 
-                ${gate.prediction.status === 'open' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
-                gate.prediction.status === 'closed' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' :
-                    'bg-amber-500/20 text-amber-300 border border-amber-500/30'}">
+                ${gate.prediction.status === 'open' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
+                gate.prediction.status === 'closed' ? 'bg-rose-100 text-rose-700 border border-rose-200' :
+                    'bg-amber-100 text-amber-700 border border-amber-200'}">
                 ${gate.prediction.status.toUpperCase()}
             </div>
-            <p class="text-sm font-medium text-slate-200 mb-1 flex items-center gap-2">
-                <span class="opacity-70">${gate.prediction.dataSource || '📅 Schedule'}</span> 
-                <span class="w-1 h-1 rounded-full bg-slate-500"></span> 
+            <p class="text-sm font-medium text-slate-600 mb-1 flex items-center gap-2">
+                <span class="opacity-80">${gate.prediction.dataSource || '📅 Schedule'}</span> 
+                <span class="w-1 h-1 rounded-full bg-slate-400"></span> 
                 <span>${Math.round(gate.prediction.confidence * 100)}% Match</span>
             </p>
-            ${gate.prediction.quality ? `<p class="text-xs text-slate-400 font-medium mb-6">📊 ${gate.prediction.quality.reportCount} reports • ${gate.prediction.quality.latestUpdate}</p>` : '<div class="mb-6"></div>'}
+            ${gate.prediction.quality ? `<p class="text-xs text-slate-500 font-medium mb-6">📊 ${gate.prediction.quality.reportCount} reports • ${gate.prediction.quality.latestUpdate}</p>` : '<div class="mb-6"></div>'}
             
-            <div class="bg-white/5 border border-white/10 rounded-2xl p-5 mb-4 backdrop-blur-sm">
-                <p class="font-bold text-sm text-slate-200 mb-3 block">Is the gate actually open or closed?</p>
+            <div class="bg-white border border-slate-200/50 rounded-2xl p-5 mb-4 shadow-sm">
+                <p class="font-bold text-sm text-slate-700 mb-3 block">Is the gate actually open or closed?</p>
                 <div class="grid grid-cols-2 gap-3">
-                    <button id="report-open-btn" class="py-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 font-bold text-sm transition-all active:scale-95">✅ OPEN</button>
-                    <button id="report-closed-btn" class="py-3 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 font-bold text-sm transition-all active:scale-95">🔴 CLOSED</button>
+                    <button id="report-open-btn" class="py-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-sm transition-all active:scale-95">✅ OPEN</button>
+                    <button id="report-closed-btn" class="py-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-sm transition-all active:scale-95">🔴 CLOSED</button>
                 </div>
             </div>
 
-            <div class="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 backdrop-blur-sm mb-4">
-                <p class="font-bold text-sm text-amber-200 mb-3 block">Report Train Delay</p>
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-4">
+                <p class="font-bold text-sm text-amber-800 mb-3 block">Report Train Delay</p>
                 <div class="flex gap-3 mb-3">
-                    <input type="text" id="train-number" placeholder="Train # (e.g. 12345)" class="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-amber-500/50 outline-none transition-colors">
-                    <input type="number" id="delay-minutes" placeholder="Delay (min)" class="w-24 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-amber-500/50 outline-none transition-colors">
+                    <input type="text" id="train-number" placeholder="Train # (e.g. 12345)" class="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-amber-500 outline-none transition-colors">
+                    <input type="number" id="delay-minutes" placeholder="Delay (min)" class="w-24 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-amber-500 outline-none transition-colors">
                 </div>
-                <button id="report-delay-btn" class="w-full py-2.5 rounded-lg bg-amber-500 text-black font-bold text-sm shadow-lg shadow-amber-500/20 hover:bg-amber-400 active:scale-95 transition-all">Submit Delay</button>
+                <button id="report-delay-btn" class="w-full py-2.5 rounded-lg bg-amber-500 text-white font-bold text-sm shadow-lg shadow-amber-500/20 hover:bg-amber-600 active:scale-95 transition-all">Submit Delay</button>
             </div>
 
             <div class="mt-4 text-center">
-                <p class="text-xs font-medium text-slate-500">Points: ${CrowdService.getUserStats().points} | Level ${CrowdService.getUserStats().level}</p>
+                <p class="text-xs font-medium text-slate-400">Points: ${CrowdService.getUserStats().points} | Level ${CrowdService.getUserStats().level}</p>
             </div>
         `;
 
