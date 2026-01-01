@@ -33,7 +33,7 @@ const GateService = {
         try {
             // Renamed fetchFromOSM to fetchFromOverpass as per new logic
             const [osmGates, supabaseGates] = await Promise.all([
-                this.fetchFromOverpass(station), // Pass station object
+                this.fetchFromOSM(station), // Pass station object
                 this.fetchFromSupabase(station.code)
             ]);
 
