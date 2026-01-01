@@ -72,8 +72,18 @@ const App = {
 
     handleBack() {
         if (this.currentScreen === 'station') {
+            this.selectedCity = null;
             this.showScreen('city-search');
         } else if (this.currentScreen === 'gates') {
+            // Clear map markers when going back
+            if (window.MapService && window.MapService.map) {
+                window.MapService.map.eachLayer((layer) => {
+                    if (layer !== window.MapService.tileLayer) {
+                        window.MapService.map.removeLayer(layer);
+                    }
+                });
+            }
+            this.gates = [];
             this.showScreen('station');
         }
     },
