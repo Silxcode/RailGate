@@ -96,7 +96,7 @@ const App = {
         const cities = StationService.getPopularCities(10);
 
         container.innerHTML = cities.map(city => `
-            <div class="glass-btn p-4 rounded-xl cursor-pointer hover:bg-white/20 text-left transition-all" data-city="${city.name}">
+            <div class="glass-btn city-card p-4 rounded-xl cursor-pointer hover:bg-white/20 text-left transition-all" data-city="${city.name}">
                 <h3 class="font-bold text-lg text-white mb-1">${city.name}</h3>
                 <p class="text-xs text-slate-300 font-medium">${city.stationCount} station${city.stationCount > 1 ? 's' : ''}</p>
             </div>
@@ -135,7 +135,7 @@ const App = {
             }
 
             container.innerHTML = results.map(city => `
-                <div class="glass-btn p-4 rounded-xl cursor-pointer mb-2 text-left" data-city="${city.name}">
+                <div class="glass-btn city-card p-4 rounded-xl cursor-pointer mb-2 text-left" data-city="${city.name}">
                     <h3 class="font-bold text-lg text-white mb-1">${city.name}</h3>
                     <p class="text-xs text-slate-300 font-medium">${city.stationCount} station${city.stationCount > 1 ? 's' : ''}</p>
                 </div>
@@ -167,7 +167,7 @@ const App = {
         const list = document.getElementById('station-list');
 
         list.innerHTML = stations.map(station => `
-            <div class="glass-btn p-5 rounded-2xl cursor-pointer text-left relative overflow-hidden group active:scale-95 transition-all" data-code="${station.code}">
+            <div class="glass-btn station-card p-5 rounded-2xl cursor-pointer text-left relative overflow-hidden group active:scale-95 transition-all" data-code="${station.code}">
                 <div class="flex justify-between items-start mb-2">
                     <h3 class="font-bold text-lg text-white pr-12">${station.name}</h3>
                     <span class="absolute top-4 right-4 bg-white/10 px-2 py-1 rounded text-xs font-mono text-slate-300 border border-white/10 group-hover:bg-white/20 transition-colors">${station.code}</span>
@@ -253,7 +253,7 @@ const App = {
         listContainer.innerHTML = gates.length === 0
             ? '<p class="text-center p-8 text-slate-400 font-medium">No gates found nearby</p>'
             : gates.map(gate => `
-                <div class="glass-btn p-4 rounded-xl flex justify-between items-center cursor-pointer group active:scale-95 transition-all border border-white/5 bg-white/5 hover:bg-white/10" data-id="${gate.id}">
+                <div class="glass-btn gate-card p-4 rounded-xl flex justify-between items-center cursor-pointer group active:scale-95 transition-all border border-white/5 bg-white/5 hover:bg-white/10" data-id="${gate.id}">
                     <div class="flex-1 pr-4">
                         <h3 class="font-bold text-white text-base mb-1 group-hover:text-indigo-300 transition-colors">${gate.name}</h3>
                         <p class="text-xs text-slate-300 font-medium flex items-center gap-1">
