@@ -134,15 +134,30 @@ const App = {
                 return;
             }
 
-            container.innerHTML = results.map(city => `
-                <div class="glass-btn city-card p-4 rounded-xl cursor-pointer mb-2 text-left" data-city="${city.name}">
-                    <h3 class="font-bold text-lg text-white mb-1">${city.name}</h3>
-                    <p class="text-xs text-slate-300 font-medium">${city.stationCount} station${city.stationCount > 1 ? 's' : ''}</p>
+            container.innerHTML = results.map(result => `
+                <div class="glass-btn city-card p-4 rounded-xl cursor-pointer mb-2 text-left" 
+                     data-type="${result.type}" 
+                     data-city="${result.city || result.name}"
+                     data-station-code="${result.station?.code || ''}">
+                    <h3 class="font-bold text-lg text-white mb-1">${result.name}</h3>
+                    <p class="text-xs text-slate-300 font-medium">
+                        ${result.type === 'station' ? `📍 ${result.city}` : `${result.stationCount} station${result.stationCount > 1 ? 's' : ''}`}
+                    </p>
                 </div>
             `).join('');
 
             container.querySelectorAll('.city-card').forEach(card => {
-                card.onclick = () => this.selectCity(card.dataset.city);
+                card.onclick = () => {
+                    const type = card.dataset.type;
+                    if (type === 'station') {
+                        // Direct navigation to station
+                        const stationCode = card.dataset.stationCode;
+                        this.selectStation(stationCode);
+                    } else {
+                        // Navigate to city's station list
+                        this.selectCity(card.dataset.city);
+                    }
+                };
             });
         }, 100);
     },
@@ -233,13 +248,16 @@ const App = {
         }
     },
 
-    render() {
+    async render() {
         const crowdReports = CrowdService.reports || [];
 
-        const gatesWithStatus = this.gates.map(gate => ({
+        // Predict status for each gate (async)
+        const gatesWithStatusPromises = this.gates.map(async gate => ({
             ...gate,
-            prediction: StatusPredictor.predict(gate, this.trains, crowdReports, this.trainDelays)
+            prediction: await StatusPredictor.predict(gate, this.selectedStation.code, crowdReports)
         }));
+
+        const gatesWithStatus = await Promise.all(gatesWithStatusPromises);
 
         MapService.renderGates(gatesWithStatus, (gate) => this.showGateDetail(gate));
         this.renderGateList(gatesWithStatus);
@@ -263,7 +281,8 @@ const App = {
                     <div class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider
                         ${gate.prediction.status === 'open' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
                     gate.prediction.status === 'closed' ? 'bg-rose-100 text-rose-700 border border-rose-200' :
-                        'bg-amber-100 text-amber-700 border border-amber-200'}">
+                        gate.prediction.status === 'warning' ? 'bg-amber-100 text-amber-700 border border-amber-200' :
+                            'bg-slate-100 text-slate-700 border border-slate-200'}">
                         ${gate.prediction.status}
                     </div>
                 </div>
@@ -284,7 +303,8 @@ const App = {
             <div class="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 
                 ${gate.prediction.status === 'open' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
                 gate.prediction.status === 'closed' ? 'bg-rose-100 text-rose-700 border border-rose-200' :
-                    'bg-amber-100 text-amber-700 border border-amber-200'}">
+                    gate.prediction.status === 'warning' ? 'bg-amber-100 text-amber-700 border border-amber-200' :
+                        'bg-slate-100 text-slate-700 border border-slate-200'}">
                 ${gate.prediction.status.toUpperCase()}
             </div>
             <p class="text-sm font-medium text-slate-600 mb-1 flex items-center gap-2">
@@ -293,6 +313,14 @@ const App = {
                 <span>${Math.round(gate.prediction.confidence * 100)}% Match</span>
             </p>
             ${gate.prediction.quality ? `<p class="text-xs text-slate-500 font-medium mb-6">📊 ${gate.prediction.quality.reportCount} reports • ${gate.prediction.quality.latestUpdate}</p>` : '<div class="mb-6"></div>'}
+            
+            ${gate.prediction.status === 'unknown' ? `
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 animate-pulse">
+                <p class="text-sm text-blue-800 font-semibold flex items-center gap-2">
+                    📍 Help improve accuracy! <br>Is this gate open or closed right now?
+                </p>
+            </div>
+            ` : ''}
             
             <div class="bg-white border border-slate-200/50 rounded-2xl p-5 mb-4 shadow-sm">
                 <p class="font-bold text-sm text-slate-700 mb-3 block">Is the gate actually open or closed?</p>
@@ -304,11 +332,16 @@ const App = {
 
             <div class="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-4">
                 <p class="font-bold text-sm text-amber-800 mb-3 block">Report Train Delay</p>
-                <div class="flex gap-3 mb-3">
-                    <input type="text" id="train-number" placeholder="Train # (e.g. 12345)" class="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-amber-500 outline-none transition-colors">
-                    <input type="number" id="delay-minutes" placeholder="Delay (min)" class="w-24 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-amber-500 outline-none transition-colors">
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <button class="delay-btn py-2.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 font-semibold text-xs transition-all active:scale-95" data-delay="5-15">5-15 min</button>
+                    <button class="delay-btn py-2.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 font-semibold text-xs transition-all active:scale-95" data-delay="15-30">15-30 min</button>
+                    <button class="delay-btn py-2.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 font-semibold text-xs transition-all active:scale-95" data-delay="30-60">30-60 min</button>
+                    <button class="delay-btn py-2.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 font-semibold text-xs transition-all active:scale-95" data-delay="60+">> 1 hour</button>
                 </div>
-                <button id="report-delay-btn" class="w-full py-2.5 rounded-lg bg-amber-500 text-white font-bold text-sm shadow-lg shadow-amber-500/20 hover:bg-amber-600 active:scale-95 transition-all">Submit Delay</button>
+                <div id="delay-details" class="hidden mt-3">
+                    <input type="text" id="train-number" placeholder="Train # (optional)" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-amber-500 outline-none transition-colors mb-2">
+                </div>
+                <p class="text-xs text-amber-700 mt-2 cursor-pointer hover:underline" id="add-details-link">+ Add train number</p>
             </div>
 
             <div class="mt-4 text-center">
@@ -318,27 +351,28 @@ const App = {
 
         document.getElementById('report-open-btn').onclick = () => this.handleStatusReport(gate, 'open');
         document.getElementById('report-closed-btn').onclick = () => this.handleStatusReport(gate, 'closed');
-        document.getElementById('report-delay-btn').onclick = () => this.handleDelayReport(gate);
-    },
 
-    handleDelayReport(gate) {
-        const trainNumber = document.getElementById('train-number').value.trim();
-        const delayMinutes = parseInt(document.getElementById('delay-minutes').value);
-
-        if (!trainNumber || !delayMinutes || delayMinutes < 0) {
-            alert('Please enter valid train number and delay minutes');
-            return;
-        }
-
-        CrowdService.submitDelayReport({
-            trainNumber,
-            delayMinutes,
-            station: gate.name,
-            timestamp: new Date().toISOString()
+        // Quick-select delay buttons
+        document.querySelectorAll('.delay-btn').forEach(btn => {
+            btn.onclick = () => this.handleDelayReport(gate, btn.dataset.delay);
         });
 
-        document.getElementById('train-number').value = '';
-        document.getElementById('delay-minutes').value = '';
+        // Toggle details
+        document.getElementById('add-details-link').onclick = () => {
+            const details = document.getElementById('delay-details');
+            details.classList.toggle('hidden');
+        };
+    },
+
+    handleDelayReport(gate, delayBucket) {
+        const trainNumber = document.getElementById('train-number')?.value.trim() || null;
+
+        CrowdService.submitDelayReport({
+            gateId: gate.id,
+            stationCode: this.selectedStation?.code,
+            delayBucket,
+            trainNumber
+        });
 
         this.render();
         setTimeout(() => this.showGateDetail(gate), 2000);

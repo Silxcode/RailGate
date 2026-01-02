@@ -74,20 +74,54 @@ const StationService = {
     },
 
     /**
-     * Search cities by name (fuzzy)
+     * Search by city name or station code (fuzzy)
      */
     searchCities(query) {
         if (!query || query.length < 2) return [];
 
         const lowerQuery = query.toLowerCase();
-        const cities = Array.from(this.stationsByCity.keys())
-            .filter(city => city.toLowerCase().includes(lowerQuery))
-            .slice(0, 10); // Top 10 matches
+        const upperQuery = query.toUpperCase();
+        const results = [];
 
-        return cities.map(city => ({
-            name: city,
-            stationCount: this.stationsByCity.get(city).length
-        }));
+        // 1. Priority: Exact station code match
+        if (this.stationsByCode.has(upperQuery)) {
+            const station = this.stationsByCode.get(upperQuery);
+            results.push({
+                type: 'station',
+                name: `${station.name} (${station.code})`,
+                city: station.city,
+                stationCount: 1,
+                station: station
+            });
+        }
+
+        // 2. Partial station code matches
+        const codeMatches = Array.from(this.stationsByCode.entries())
+            .filter(([code, _]) => code.includes(upperQuery) && code !== upperQuery)
+            .slice(0, 3)
+            .map(([_, station]) => ({
+                type: 'station',
+                name: `${station.name} (${station.code})`,
+                city: station.city,
+                stationCount: 1,
+                station: station
+            }));
+
+        results.push(...codeMatches);
+
+        // 3. City name matches (existing logic)
+        const cityMatches = Array.from(this.stationsByCity.keys())
+            .filter(city => city.toLowerCase().includes(lowerQuery))
+            .slice(0, 10 - results.length)
+            .map(city => ({
+                type: 'city',
+                name: city,
+                stationCount: this.stationsByCity.get(city).length
+            }));
+
+        results.push(...cityMatches);
+
+        return results.slice(0, 10);
     },
 
     /**

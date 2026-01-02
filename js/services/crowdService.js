@@ -43,12 +43,18 @@ const CrowdService = {
             const { error } = await supabase.from('gate_reports').insert(report);
             if (error) console.error('Error submitting report:', error);
             else console.log(`Report saved to DB for ${gateName}`);
+
+            // Verify recent predictions for ML accuracy tracking
+            if (typeof StatusPredictor !== 'undefined' && StatusPredictor.verifyPrediction) {
+                StatusPredictor.verifyPrediction(gateId, status, this.user?.id);
+            }
         } else {
             console.log(`(Mock) Report for OSM gate ${gateName} saved locally`);
         }
 
-        // Gamification (Local for now)
+        // Gamification
         this.updateUserStats(10);
+        await this.syncUserStatsToDb();
         this.showThankYouNotification(gateName, status);
 
         return report;
@@ -114,14 +120,53 @@ const CrowdService = {
     // Legacy/Stub methods
     submitClosureDuration() { /* ... */ },
     getRecentReports() { return []; },
+
     /**
-     * Submit a train delay report (crowdsourcing)
+     * Submit a train delay report (Quick-select UX)
      */
-    submitDelayReport(report) {
-        this.delayReports.push(report);
-        this.updateUserStats(20); // 20 points for delay reports
-        console.log('Delay report submitted:', report);
+    async submitDelayReport(report) {
+        if (!this.user) await this.init();
+
+        const delayData = {
+            gate_id: report.gateId,
+            station_code: report.stationCode,
+            delay_bucket: report.delayBucket,
+            train_number: report.trainNumber,
+            reported_by: this.user?.id
+        };
+
+        const { error } = await supabase
+            .from('train_delays')
+            .insert(delayData);
+
+        if (error) {
+            console.error('Error submitting delay:', error);
+        } else {
+            console.log('✅ Delay report saved to DB');
+        }
+
+        // Update user stats
+        this.updateUserStats(20);
+        await this.syncUserStatsToDb();
         this.showThankYouNotification('Delay Report', 'submitted');
+    },
+
+    /**
+     * Sync user stats to database
+     */
+    async syncUserStatsToDb() {
+        if (!this.user) return;
+
+        const { error } = await supabase
+            .from('user_profiles')
+            .upsert({
+                user_id: this.user.id,
+                points: this.userStats.points,
+                level: this.userStats.level,
+                total_reports: this.userStats.totalReports
+            });
+
+        if (error) console.warn('Failed to sync user stats:', error);
     }
 };
 
