@@ -239,9 +239,10 @@ const StatusPredictor = {
                 predicted_status: prediction.status,
                 confidence: prediction.confidence,
                 data_source: prediction.source,
-                train_number: prediction.trainInfo?.number,
-                train_type: prediction.trainInfo?.type,
-                minutes_until_arrival: prediction.trainInfo?.minutesUntil,
+                train_number: prediction.trainInfo?.number || null,
+                train_name: prediction.trainInfo?.name || null,
+                train_type: prediction.trainInfo?.type || null,
+                minutes_until_arrival: prediction.trainInfo?.minutesUntil || null,
                 hour_of_day: hour,
                 day_of_week: now.getDay(),
                 is_peak_hour: isPeak

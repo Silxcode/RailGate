@@ -12,6 +12,9 @@ const App = {
     async init() {
         console.log('RailGate India: Initializing...');
 
+        // Initialize anonymous authentication for prediction logging
+        await CrowdService.init();
+
         // Load Station Database
         await StationService.init();
 
@@ -233,19 +236,10 @@ const App = {
     },
 
     async refreshDelays() {
-        if (document.hidden) {
-            console.log('⏸️ Skipping delay refresh (tab hidden)');
-            return;
-        }
-
-        try {
-            this.trainDelays = await StatusPredictor.fetchTrainDelays(this.trains);
-            const delayCount = Object.keys(this.trainDelays).length;
-            console.log(`🚂 Delays fetched: ${delayCount} train${delayCount !== 1 ? 's' : ''} with delays`);
-            this.render();
-        } catch (err) {
-            console.warn('Failed to fetch delays:', err);
-        }
+        // Note: fetchTrainDelays method not implemented yet
+        // This method is currently a no-op until train delay fetching is implemented
+        console.log('ℹ️ Train delay fetching not yet implemented');
+        this.trainDelays = {};
     },
 
     async render() {
