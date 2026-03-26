@@ -8,8 +8,13 @@ const StatusPredictor = {
     // Time windows
     TIME_WINDOWS: {
         GATE_REPORTS: 10 * 60 * 1000,
-        WARNING_BUFFER: 5
+        WARNING_BUFFER: 5,
+        POST_PASS_BUFFER_MS: 90 * 1000,  // 90s safety margin after train passes
+        CLOSURE_LOCK_MS: 3 * 60 * 1000   // 3-min lock: don't flip to 'open' too fast
     },
+
+    // Track last-closed timestamp per gate to prevent false-open flicker
+    _lastClosedState: new Map(),
 
     /**
      * Main prediction method with all enhancements
@@ -18,10 +23,25 @@ const StatusPredictor = {
         const now = new Date();
         let prediction = null;
 
-        // 1. PRIORITY 1: User reports
+        // 1. PRIORITY 1: Recent User reports (< 5 min) ALWAYS override
         const consensus = this.getConsensusGateStatus(gate.id, crowdReports, now);
-        if (consensus && consensus.confidence > 0.7) {
-            prediction = this._buildCrowdsourcePrediction(consensus, now);
+        if (consensus) {
+            const ageMinutes = Math.round((now - consensus.latestTimestamp) / 60000);
+
+            // Very recent reports (< 5 min) ALWAYS take priority
+            if (ageMinutes < 5) {
+                prediction = this._buildCrowdsourcePrediction(consensus, now);
+                prediction.confidence = Math.max(0.95, consensus.confidence); // Boost confidence
+                prediction.overridesAPI = true;
+                console.log(`👥 Using fresh crowd report (${ageMinutes} min old) - OVERRIDING API`);
+                return prediction;
+            }
+
+            // Older reports (5-10 min) if high confidence
+            if (consensus.confidence > 0.8) {
+                prediction = this._buildCrowdsourcePrediction(consensus, now);
+                console.log(`👥 Using crowd report (${ageMinutes} min old, high confidence)`);
+            }
         }
 
         // 2. PRIORITY 2: RailRadar with enhancements
@@ -62,75 +82,166 @@ const StatusPredictor = {
      */
     async _predictFromRailRadar(gate, stationCode, now) {
         const approachingTrains = await TrainService.fetchTrainsApproachingStation(stationCode);
-        if (!approachingTrains || approachingTrains.length === 0) return null;
+        if (!approachingTrains || approachingTrains.length === 0) {
+            // PESSIMISTIC: Check if gate was recently closed — don't flip to open instantly
+            return this._applyPostPassBuffer(gate, now, null);
+        }
 
-        // Time-of-day adjustment
         const timeAdjustment = this._getTimeAdjustment(now);
+        const tracks = typeof GateService !== 'undefined' ? GateService.railwayTracks : [];
 
-        // Check ALL approaching trains (not just first)
+        // Collect ALL closure/warning signals from ALL trains
+        let closestClosed = null;
+        let closestWarning = null;
+        let anyTrainNearby = false;
+
         for (const train of approachingTrains) {
             const progress = await TrainService.fetchTrainProgress(train.number, stationCode);
             if (!progress) continue;
 
-            // Skip if direction doesn't match gate
-            if (gate.direction && gate.direction !== 'both') {
-                const trainDirection = this._getTrainDirection(progress);
-                if (trainDirection !== gate.direction) continue;
-            }
-
-            // Get adjusted closure threshold
             const baseThreshold = progress.closureThreshold || 10;
             const closureThreshold = baseThreshold + timeAdjustment;
             const warningThreshold = closureThreshold + this.TIME_WINDOWS.WARNING_BUFFER;
             const minutesUntil = progress.minutesUntilArrival;
+            const dwellMinutes = progress.dwellMinutes || 0;
 
-            // Train at station
-            if (progress.hasReached && !progress.hasPassed) {
-                return this._buildPrediction('closed', 0.95, 'railradar', train, progress,
-                    `${this._trainTypeEmoji(progress.trainType)} ${train.name} at station now`);
+            // --- TRACK-VECTOR ANALYSIS ---
+            // If we have track geometry and GPSUtils, check if gate is in the train's path
+            if (tracks.length > 0 && typeof GPSUtils !== 'undefined' && GPSUtils.isGateInTrainPath) {
+                const inPath = GPSUtils.isGateInTrainPath(
+                    gate, stationCode, progress, tracks
+                );
+                // If gate is NOT in this train's path, skip this train entirely
+                if (inPath === false) {
+                    console.log(`🛤️ Gate ${gate.name} NOT in path of ${train.name} — skipping`);
+                    continue;
+                }
             }
 
-            // Gate should close
+            anyTrainNearby = true;
+
+            // CASE 1: Train has PASSED the station — apply post-pass buffer
+            if (progress.hasPassed) {
+                // Record closed-end timestamp, gate stays closed for buffer period
+                this._lastClosedState.set(gate.id, { timestamp: now.getTime(), train: train.name });
+                continue; // Check next train
+            }
+
+            // CASE 2: Train AT platform (arrived but not departed)
+            if (progress.hasReached && !progress.hasPassed) {
+                // Gate is CLOSED while train is at platform (pessimistic)
+                // Only mark open if dwellMinutes is high and no other train is near
+                if (dwellMinutes >= 3) {
+                    // Long dwell: likely stopped, but keep warning
+                    if (!closestWarning || minutesUntil < closestWarning.minutesUntil) {
+                        closestWarning = {
+                            train, progress, minutesUntil,
+                            message: `⚠️ ${train.name} at platform (${dwellMinutes} min dwell)`
+                        };
+                    }
+                } else {
+                    // Recently arrived — gate is definitely closed
+                    closestClosed = {
+                        train, progress, minutesUntil,
+                        message: `${this._trainTypeEmoji(progress.trainType)} ${train.name} at station`
+                    };
+                    this._lastClosedState.set(gate.id, { timestamp: now.getTime(), train: train.name });
+                }
+                continue;
+            }
+
+            // CASE 3: Train APPROACHING — within closure threshold
             if (progress.isApproaching && minutesUntil <= closureThreshold) {
                 const delayText = progress.delayMinutes > 0 ? ` (${progress.delayMinutes} min late)` : '';
-                return this._buildPrediction('closed', 0.90, 'railradar', train, progress,
-                    `${this._trainTypeEmoji(progress.trainType)} ${train.name} arriving in ${minutesUntil} min${delayText}`);
+                if (!closestClosed || minutesUntil < closestClosed.minutesUntil) {
+                    closestClosed = {
+                        train, progress, minutesUntil,
+                        message: `${this._trainTypeEmoji(progress.trainType)} ${train.name} arriving in ${minutesUntil} min${delayText}`
+                    };
+                }
+                this._lastClosedState.set(gate.id, { timestamp: now.getTime(), train: train.name });
+                continue;
             }
 
-            // Warning zone
+            // CASE 4: Train APPROACHING — within warning threshold
             if (progress.isApproaching && minutesUntil <= warningThreshold) {
-                return this._buildPrediction('warning', 0.85, 'railradar', train, progress,
-                    `${this._trainTypeEmoji(progress.trainType)} ${train.name} arriving in ${minutesUntil} min`);
+                if (!closestWarning || minutesUntil < closestWarning.minutesUntil) {
+                    closestWarning = {
+                        train, progress, minutesUntil,
+                        message: `${this._trainTypeEmoji(progress.trainType)} ${train.name} arriving in ${minutesUntil} min`
+                    };
+                }
+                continue;
             }
         }
 
-        // Check for back-to-back trains
-        if (approachingTrains.length >= 2) {
-            const first = approachingTrains[0];
-            const second = approachingTrains[1];
-            const gap = second.minutesUntilArrival - first.minutesUntilArrival;
+        // --- DECISION PRIORITY ---
 
-            if (gap < 15) {
-                return {
-                    status: 'warning',
-                    confidence: 0.80,
-                    source: 'railradar',
-                    message: `2 trains: ${first.name} (${first.minutesUntilArrival}m) + ${second.name} (${second.minutesUntilArrival}m)`,
-                    dataSource: '🛰️ Rail Radar',
-                    trainInfo: { backToBack: true, gap }
-                };
-            }
+        // 1. Any train causing closure → CLOSED (back-to-back lock: stays closed for ALL)
+        if (closestClosed) {
+            return this._buildPrediction('closed', 0.92, 'railradar',
+                closestClosed.train, closestClosed.progress, closestClosed.message);
         }
 
-        // Gate is open (no immediate trains)
+        // 2. Any train in warning zone → WARNING
+        if (closestWarning) {
+            return this._buildPrediction('warning', 0.85, 'railradar',
+                closestWarning.train, closestWarning.progress, closestWarning.message);
+        }
+
+        // 3. No immediate threat — but apply post-pass buffer before saying 'open'
+        if (anyTrainNearby || approachingTrains.length > 0) {
+            const bufferResult = this._applyPostPassBuffer(gate, now, approachingTrains[0]);
+            if (bufferResult) return bufferResult;
+        }
+
+        // 4. Genuinely open
         const nextTrain = approachingTrains[0];
         return {
             status: 'open',
-            confidence: 0.75,
+            confidence: 0.70,
             source: 'railradar',
             message: `Next train in ${nextTrain.minutesUntilArrival} min`,
             dataSource: '🛰️ Rail Radar'
         };
+    },
+
+    /**
+     * Post-pass safety buffer: prevents flipping to 'open' too quickly
+     * after a train has just passed or the gate was recently marked closed.
+     */
+    _applyPostPassBuffer(gate, now, nextTrain) {
+        const lastClosed = this._lastClosedState.get(gate.id);
+        if (!lastClosed) return null;
+
+        const elapsed = now.getTime() - lastClosed.timestamp;
+
+        // Within 90-second hard buffer → stay CLOSED
+        if (elapsed < this.TIME_WINDOWS.POST_PASS_BUFFER_MS) {
+            const remainSec = Math.round((this.TIME_WINDOWS.POST_PASS_BUFFER_MS - elapsed) / 1000);
+            return {
+                status: 'closed',
+                confidence: 0.85,
+                source: 'railradar',
+                message: `🔒 Gate clearing — wait ~${remainSec}s (${lastClosed.train})`,
+                dataSource: '🛰️ Rail Radar (Buffer)'
+            };
+        }
+
+        // Within 3-minute soft lock → show WARNING (not open)
+        if (elapsed < this.TIME_WINDOWS.CLOSURE_LOCK_MS) {
+            return {
+                status: 'warning',
+                confidence: 0.70,
+                source: 'railradar',
+                message: `⚠️ Gate may still be clearing (${lastClosed.train} just passed)`,
+                dataSource: '🛰️ Rail Radar (Buffer)'
+            };
+        }
+
+        // Beyond lock period, clear the state
+        this._lastClosedState.delete(gate.id);
+        return null;
     },
 
     /**
@@ -220,8 +331,11 @@ const StatusPredictor = {
      * Get train direction (UP/DOWN)
      */
     _getTrainDirection(progress) {
-        // UP = towards higher station sequence
-        // This is simplified; real logic may need route analysis
+        // Derive direction from station sequence in route data
+        if (progress.lastDepartedStation && progress.targetStation) {
+            // If last departed comes before target in alphabetical/code order → UP direction
+            return progress.lastDepartedStation < progress.targetStation ? 'up' : 'down';
+        }
         return progress.isApproaching ? 'up' : 'down';
     },
 

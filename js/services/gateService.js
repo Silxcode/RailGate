@@ -36,9 +36,23 @@ const GateService = {
                 this.fetchFromSupabase(station.code)
             ]);
 
-            // 3. Merge results (Supabase gates take precedence if needed, but here we just append)
-            // We could also dedup based on location if needed
-            const allGates = [...osmGates, ...supabaseGates];
+            // 3. Merge results and auto-assign gate sides using GPS
+            let allGates = [...osmGates, ...supabaseGates];
+
+            // Auto-detect gate side if GPSUtils is available
+            if (typeof GPSUtils !== 'undefined') {
+                allGates = allGates.map(gate => {
+                    const analysis = GPSUtils.analyzeGatePosition(station, gate);
+                    return {
+                        ...gate,
+                        side: analysis.side,
+                        bearing: analysis.bearing,
+                        direction: analysis.direction,
+                        distanceMeters: analysis.distanceMeters
+                    };
+                });
+                console.log(`📍 Auto-assigned gate sides based on GPS`);
+            }
 
             console.log(`Total gates: ${allGates.length} (${osmGates.length} OSM + ${supabaseGates.length} crowd)`);
 

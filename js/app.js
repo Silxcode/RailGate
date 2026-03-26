@@ -209,6 +209,14 @@ const App = {
         this.selectedStation = StationService.getStationByCode(stationCode);
         console.log('Selected station:', this.selectedStation);
 
+        // SMART ZONE SCRAPING: Prioritize this station's zone
+        if (typeof ZoneScraper !== 'undefined' && ZoneScraper.isRunning) {
+            console.log(`⭐ Prioritizing zone for ${stationCode}...`);
+            ZoneScraper.prioritizeStation(stationCode).catch(err => {
+                console.warn('Zone prioritization failed:', err);
+            });
+        }
+
         this.loadGatesForStation(this.selectedStation);
     },
 

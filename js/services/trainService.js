@@ -1,6 +1,11 @@
 const TrainService = {
     _cache: {},
-    _cacheTTL: 30 * 60 * 1000,
+    // Separate cache TTLs for different data types
+    _cacheTTL: {
+        trainPosition: 2 * 60 * 1000,      // 2 minutes - real-time critical
+        stationSchedules: 60 * 60 * 1000,  // 1 hour - static data
+        trainProgress: 2 * 60 * 1000       // 2 minutes - real-time critical
+    },
     RAILRADAR_API: 'https://api.railradar.in/api/v1',
     API_KEY: null,
 
@@ -27,18 +32,31 @@ const TrainService = {
         return null;
     },
 
-    _getCache(trainNumber) {
+    _getCache(trainNumber, cacheType = 'trainPosition') {
         const cached = this._cache[trainNumber];
         if (!cached) return null;
-        if (Date.now() - cached.cachedAt < this._cacheTTL) {
+
+        const ttl = this._cacheTTL[cacheType] || this._cacheTTL.trainPosition;
+        const age = Date.now() - cached.cachedAt;
+
+        if (age < ttl) {
+            console.log(`✅ Using cached ${cacheType} for ${trainNumber} (age: ${Math.round(age / 1000)}s)`);
             return cached.data;
         }
+
+        console.log(`⏰ Cache expired for ${trainNumber} (age: ${Math.round(age / 1000)}s, ttl: ${ttl / 1000}s)`);
         delete this._cache[trainNumber];
         return null;
     },
 
-    _setCache(trainNumber, data) {
-        this._cache[trainNumber] = { data, cachedAt: Date.now() };
+    _setCache(trainNumber, data, cacheType = 'trainPosition') {
+        this._cache[trainNumber] = {
+            data,
+            cachedAt: Date.now(),
+            cacheType,
+            ttl: this._cacheTTL[cacheType]
+        };
+        console.log(`💾 Cached ${cacheType} for ${trainNumber}`);
     },
 
     async _fetchFromRailRadar(trainNumber) {
@@ -271,6 +289,21 @@ const TrainService = {
 
         } catch (error) {
             console.warn('Train progress fetch failed:', error.message);
+
+            // Fallback to NTES if available
+            if (typeof NTESService !== 'undefined') {
+                console.log('⚠️ RailRadar failed, trying NTES fallback...');
+                try {
+                    const ntesData = await NTESService.getTrainProgressForStation(trainNumber, targetStationCode);
+                    if (ntesData) {
+                        console.log('✅ Got data from NTES fallback');
+                        return ntesData;
+                    }
+                } catch (ntesError) {
+                    console.warn('NTES fallback also failed:', ntesError.message);
+                }
+            }
+
             return null;
         }
     },
