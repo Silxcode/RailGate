@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/ntes-proxy/(.*)",
+      "destination": "/api/ntes-proxy.js"
+    },
+    {
+      "source": "/api/railradar/(.*)",
+      "destination": "/api/railradar.js"
+    }
+  ]
+}

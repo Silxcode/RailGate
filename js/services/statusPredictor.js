@@ -350,6 +350,13 @@ const StatusPredictor = {
             // Ensure status is lowercase to match DB constraint ('open', 'closed', etc.)
             const status = (prediction.status || 'unknown').toLowerCase();
 
+            // Skip logging if the gate ID is not a valid UUID (e.g., osm_...)
+            const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(gate.id);
+            if (!isUUID) {
+                console.debug(`Skipping log for non-UUID gate: ${gate.id}`);
+                return;
+            }
+
             const { error } = await supabase.from('prediction_logs').insert({
                 gate_id: gate.id,
                 station_code: stationCode,
