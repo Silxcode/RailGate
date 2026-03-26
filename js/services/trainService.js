@@ -6,7 +6,8 @@ const TrainService = {
         stationSchedules: 60 * 60 * 1000,  // 1 hour - static data
         trainProgress: 2 * 60 * 1000       // 2 minutes - real-time critical
     },
-    RAILRADAR_API: 'https://api.railradar.in/api/v1',
+    // Point to our unified proxy endpoint
+    RAILRADAR_API: '/api/railradar',
     API_KEY: null,
 
     async getLiveStatus(trainNumber) {

@@ -5,15 +5,15 @@ export default defineConfig({
     // Ensure all assets are copied correctly
     publicDir: 'public',
 
-    // NTES Proxy: unified endpoint for dev (Vite) and prod (Vercel)
+    // Proxy rules for third-party APIs
     server: {
         proxy: {
+            // NTES Proxy
             '/api/ntes-proxy': {
                 target: 'https://enquiry.indianrail.gov.in',
                 changeOrigin: true,
                 secure: true,
                 rewrite: (path) => path.replace(/^\/api\/ntes-proxy/, '/mntes'),
-                // Rewrite cookie domain so browser accepts JSESSIONID/TS* on localhost
                 cookieDomainRewrite: {
                     'enquiry.indianrail.gov.in': '',
                     '.enquiry.indianrail.gov.in': ''
@@ -22,7 +22,19 @@ export default defineConfig({
                     proxy.on('proxyReq', (proxyReq) => {
                         proxyReq.setHeader('Origin', 'https://enquiry.indianrail.gov.in');
                         proxyReq.setHeader('Referer', 'https://enquiry.indianrail.gov.in/mntes/');
-                        proxyReq.setHeader('Accept-Language', 'en-IN,en;q=0.9,hi;q=0.8');
+                    });
+                }
+            },
+            // RailRadar Proxy: Fix CORS and handle API limits
+            '/api/railradar': {
+                target: 'https://api.railradar.in',
+                changeOrigin: true,
+                secure: true,
+                rewrite: (path) => path.replace(/^\/api\/railradar/, '/api/v1'),
+                configure: (proxy) => {
+                    proxy.on('proxyReq', (proxyReq) => {
+                        proxyReq.setHeader('Origin', 'https://api.railradar.in');
+                        proxyReq.setHeader('Referer', 'https://railradar.in/');
                     });
                 }
             }

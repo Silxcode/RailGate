@@ -347,10 +347,13 @@ const StatusPredictor = {
             const hour = now.getHours();
             const isPeak = (hour >= 7 && hour < 10) || (hour >= 17 && hour < 20);
 
-            await supabase.from('prediction_logs').insert({
+            // Ensure status is lowercase to match DB constraint ('open', 'closed', etc.)
+            const status = (prediction.status || 'unknown').toLowerCase();
+
+            const { error } = await supabase.from('prediction_logs').insert({
                 gate_id: gate.id,
                 station_code: stationCode,
-                predicted_status: prediction.status,
+                predicted_status: status,
                 confidence: prediction.confidence,
                 data_source: prediction.source,
                 train_number: prediction.trainInfo?.number || null,
@@ -361,9 +364,11 @@ const StatusPredictor = {
                 day_of_week: now.getDay(),
                 is_peak_hour: isPeak
             });
+            
+            if (error) throw error;
         } catch (error) {
             // Silently fail - logging shouldn't break predictions
-            console.debug('Prediction logging failed:', error);
+            console.debug('Prediction logging failed:', error.message || error);
         }
     },
 
