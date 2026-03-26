@@ -139,7 +139,7 @@ const NTESService = {
     },
 
     /**
-     * Fetch live trains arriving at a specific station
+     * Fetch live trains arriving at a specific station (Live Station)
      */
     async fetchStationArrivals(stationCode, hoursAhead = 2) {
         // Check circuit breaker
@@ -155,19 +155,20 @@ const NTESService = {
             await this._humanDelay(1500, 3000);
             this._globalLastFetch = Date.now();
 
-            const url = `${this.PROXY_URL}/api/station/arrivals`;
+            // Correct NTES Live Station endpoint (GET)
+            const params = new URLSearchParams({
+                opt: 'LiveStation',
+                subOpt: 'StationArrivals',
+                stationCode: stationCode,
+                withinHrs: hoursAhead
+            });
+            const url = `${this.PROXY_URL}${this._STATION_PATH}?${params}`;
+
+            console.log(`🌐 NTES: Fetching arrivals for ${stationCode}...`);
             const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    ...this._buildHeaders(),
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    stationCode: stationCode,
-                    date: this._getDateString(),
-                    hours: hoursAhead
-                })
+                method: 'GET',
+                headers: this._buildHeaders(),
+                credentials: 'include'
             });
 
             if (response.status === 403 || response.status === 429) {
@@ -179,24 +180,39 @@ const NTESService = {
                 throw new Error(`NTES station API returned ${response.status}`);
             }
 
-            const data = await response.json();
-
-            if (!data || !data.success || !data.trains) {
-                console.warn(`No trains data for station ${stationCode}`);
+            const html = await response.text();
+            
+            // Parse the Live Station HTML table
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const table = doc.querySelector('table.w3-table-all, table.table');
+            
+            if (!table) {
+                console.warn(`No arrivals table found for ${stationCode}`);
                 return [];
             }
 
-            return data.trains.map(train => ({
-                number: train.trainNo,
-                name: train.trainName,
-                scheduledArrival: train.schArr,
-                expectedArrival: train.expArr || train.schArr,
-                delayMinutes: train.delayMinutes || 0,
-                platform: train.platform || 'N/A',
-                hasArrived: train.hasArrived || false,
-                hasDeparted: train.hasDeparted || false,
-                source: 'ntes'
-            }));
+            const rows = Array.from(table.querySelectorAll('tr')).filter(r => r.querySelector('td'));
+            const trains = rows.map(row => {
+                const cells = Array.from(row.querySelectorAll('td')).map(c => c.textContent.trim());
+                if (cells.length < 5) return null;
+
+                // Typical Live Station Table: Train No | Train Name | Sch Arr | Exp Arr | Delay | Platform
+                return {
+                    number: cells[0],
+                    name: cells[1],
+                    scheduledArrival: cells[2],
+                    expectedArrival: cells[3] || cells[2],
+                    delayMinutes: parseInt(cells[4]) || 0,
+                    platform: cells[5] || 'N/A',
+                    hasArrived: false, // Live station usually shows upcoming
+                    hasDeparted: false,
+                    source: 'ntes'
+                };
+            }).filter(Boolean);
+
+            console.log(`✅ NTES: Found ${trains.length} arrivals for ${stationCode}`);
+            return trains;
 
         } catch (error) {
             console.warn(`NTES station arrivals failed for ${stationCode}:`, error.message);
