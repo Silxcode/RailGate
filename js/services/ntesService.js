@@ -15,8 +15,8 @@
  */
 
 const NTESService = {
-    // In dev: Vite proxy rewrites /api/ntes → /mntes on the real server
-    PROXY_URL: '/api/ntes',
+    // Points to our dedicated proxy (Vite dev server or Vercel Serverless)
+    PROXY_URL: '/api/ntes-proxy',
 
     // Actual NTES endpoint pattern (discovered from mntes.js source)
     // GET /mntes/q?opt=TrainRunning&subOpt=FindRunningInstance&trainNo=XXXXX&startDate=DD-MM-YYYY

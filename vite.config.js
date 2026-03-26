@@ -5,14 +5,19 @@ export default defineConfig({
     // Ensure all assets are copied correctly
     publicDir: 'public',
 
-    // NTES Proxy: bypass CORS by routing through Vite dev server
+    // NTES Proxy: unified endpoint for dev (Vite) and prod (Vercel)
     server: {
         proxy: {
-            '/api/ntes': {
+            '/api/ntes-proxy': {
                 target: 'https://enquiry.indianrail.gov.in',
                 changeOrigin: true,
                 secure: true,
-                rewrite: (path) => path.replace(/^\/api\/ntes/, '/mntes'),
+                rewrite: (path) => path.replace(/^\/api\/ntes-proxy/, '/mntes'),
+                // Rewrite cookie domain so browser accepts JSESSIONID/TS* on localhost
+                cookieDomainRewrite: {
+                    'enquiry.indianrail.gov.in': '',
+                    '.enquiry.indianrail.gov.in': ''
+                },
                 configure: (proxy) => {
                     proxy.on('proxyReq', (proxyReq) => {
                         proxyReq.setHeader('Origin', 'https://enquiry.indianrail.gov.in');
