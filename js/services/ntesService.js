@@ -16,8 +16,12 @@
 
 const NTESService = {
     // In dev: Vite proxy rewrites /api/ntes → /mntes on the real server
-    // In prod: replace with your own CORS proxy URL
     PROXY_URL: '/api/ntes',
+
+    // Actual NTES endpoint pattern (discovered from mntes.js source)
+    // GET /mntes/q?opt=TrainRunning&subOpt=FindRunningInstance&trainNo=XXXXX&startDate=DD-MM-YYYY
+    _TRAIN_STATUS_PATH: '/q',
+    _STATION_PATH: '/q',
 
     _cache: {},
     _cacheTTL: 5 * 60 * 1000,       // 5 min cache per train
@@ -68,13 +72,15 @@ const NTESService = {
 
     /**
      * Fetch train running status — the main entry point.
+     * Uses the real NTES GET endpoint discovered from mntes.js:
+     * /mntes/q?opt=TrainRunning&subOpt=FindRunningInstance&trainNo=...&startDate=...
      */
     async getTrainStatus(trainNumber) {
-        // PRIORITY 1: Zone cache (from rotating scraper)
+        // PRIORITY 1: Zone cache
         if (typeof ZoneScraper !== 'undefined') {
             const cachedTrain = ZoneScraper.getTrainFromCache(trainNumber);
             if (cachedTrain && cachedTrain.cacheAge < 20) {
-                console.log(`✅ Using zone cache for train ${trainNumber} (age: ${cachedTrain.cacheAge} min)`);
+                console.log(`✅ Zone cache for ${trainNumber} (age: ${cachedTrain.cacheAge} min)`);
                 return cachedTrain;
             }
         }
@@ -83,68 +89,47 @@ const NTESService = {
         const cached = this._getCache(trainNumber);
         if (cached) return cached;
 
-        // Check circuit breaker
-        if (this._isCircuitOpen()) {
-            console.log('🔴 NTES circuit breaker OPEN — skipping fetch');
-            return null;
-        }
-
-        // Per-train rate limit (5 min)
+        // Safety checks
+        if (this._isCircuitOpen()) return null;
         const lastFetch = this._lastFetchTime[trainNumber];
-        if (lastFetch && (Date.now() - lastFetch) < this._cacheTTL) {
-            console.log(`⏳ NTES rate limit: waiting ${Math.round((this._cacheTTL - (Date.now() - lastFetch)) / 1000)}s`);
-            return null;
-        }
-
-        // Global rate limit (30s between any request)
+        if (lastFetch && (Date.now() - lastFetch) < this._cacheTTL) return null;
         const sinceLast = Date.now() - this._globalLastFetch;
-        if (sinceLast < this._globalCooldownMs) {
-            console.log(`⏳ NTES global cooldown: ${Math.round((this._globalCooldownMs - sinceLast) / 1000)}s`);
-            return null;
-        }
+        if (sinceLast < this._globalCooldownMs) return null;
 
         try {
-            // Ensure session is warm
             await this._warmSession();
-
-            console.log(`🌐 NTES: Fetching train ${trainNumber} (human-like)...`);
+            console.log(`🌐 NTES: Fetching train ${trainNumber}...`);
             this._lastFetchTime[trainNumber] = Date.now();
             this._globalLastFetch = Date.now();
 
-            // Human-like delay before the actual data request
             await this._humanDelay(2000, 4000);
 
-            const url = `${this.PROXY_URL}/api/train/running-status`;
+            // Correct NTES endpoint (GET, HTML response)
+            const params = new URLSearchParams({
+                opt: 'TrainRunning',
+                subOpt: 'FindRunningInstance',
+                trainNo: trainNumber,
+                startDate: this._getDateString()
+            });
+            const url = `${this.PROXY_URL}${this._TRAIN_STATUS_PATH}?${params}`;
+
             const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    ...this._buildHeaders(),
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    trainNo: trainNumber,
-                    startDate: this._getDateString()
-                })
+                method: 'GET',
+                headers: this._buildHeaders(),
+                credentials: 'include'
             });
 
-            // Circuit breaker: if blocked, go dark
             if (response.status === 403 || response.status === 429) {
                 this._tripCircuit();
                 return null;
             }
 
-            if (!response.ok) {
-                throw new Error(`NTES returned ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`NTES returned ${response.status}`);
 
-            const data = await response.json();
-            const parsed = this._parseNTESResponse(data, trainNumber);
+            const html = await response.text();
+            const parsed = this._parseNTESHtml(html, trainNumber);
 
-            if (parsed) {
-                this._setCache(trainNumber, parsed);
-            }
-
+            if (parsed) this._setCache(trainNumber, parsed);
             return parsed;
 
         } catch (error) {
@@ -219,43 +204,97 @@ const NTESService = {
         }
     },
 
-    // ─── PARSING (unchanged, works correctly) ────────────────────────
+    /**
+     * Parse NTES HTML response
+     * NTES renders results in a w3-table-all or Bootstrap table.
+     * Each row: Station | Sched Arr | Sched Dep | Actual Arr | Actual Dep | Delay
+     */
+    _parseNTESHtml(html, trainNumber) {
+        try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
 
-    _parseNTESResponse(data, trainNumber) {
-        if (!data || !data.success) return null;
+            // Get train name from h4/h5/title-like elements
+            const trainNameEl = doc.querySelector('.trainName, h4, h5, .card-title');
+            const trainName = trainNameEl ? trainNameEl.textContent.trim() : `Train ${trainNumber}`;
 
-        const trainData = data.data;
-        if (!trainData || !trainData.route) return null;
-
-        let currentStationCode = null;
-        let currentStationName = null;
-        let overallDelayMinutes = 0;
-
-        for (const station of trainData.route) {
-            if (station.actualArrival && !station.actualDeparture) {
-                currentStationCode = station.stationCode;
-                currentStationName = station.stationName;
-                overallDelayMinutes = station.delayMinutes || 0;
-                break;
-            } else if (station.actualDeparture) {
-                currentStationCode = station.stationCode;
-                currentStationName = station.stationName;
-                overallDelayMinutes = station.delayMinutes || 0;
+            // Find the running status table
+            const table = doc.querySelector('table.w3-table-all, table.table');
+            if (!table) {
+                console.warn('NTES: No station table found in response');
+                return null;
             }
-        }
 
-        return {
-            trainNumber,
-            trainName: trainData.trainName,
-            currentStation: currentStationCode,
-            currentStationName: currentStationName,
-            delayMinutes: overallDelayMinutes,
-            isDelayed: overallDelayMinutes > 0,
-            route: trainData.route,
-            source: 'ntes',
-            lastUpdate: new Date(),
-            dataSource: 'NTES'
-        };
+            const rows = Array.from(table.querySelectorAll('tbody tr, tr')).filter(
+                r => r.querySelectorAll('td').length >= 4
+            );
+
+            if (rows.length === 0) {
+                console.warn('NTES: No station rows found in table');
+                return null;
+            }
+
+            const route = [];
+            let currentStation = null;
+            let currentStationName = null;
+            let overallDelay = 0;
+
+            for (const row of rows) {
+                const cells = Array.from(row.querySelectorAll('td')).map(c => c.textContent.trim());
+                if (cells.length < 4) continue;
+
+                const stationName = cells[0];
+                const stationCode = row.dataset.stnCode || cells[1] || '';
+                const schedArr   = cells[2] || cells[1];
+                const schedDep   = cells[3] || cells[2];
+                const actualArr  = cells[4] || null;
+                const actualDep  = cells[5] || null;
+                const delayMin   = parseInt(cells[6]) || 0;
+
+                const entry = {
+                    stationCode: stationCode.replace(/[^A-Z0-9]/g, ''),
+                    stationName,
+                    scheduledArrival: schedArr,
+                    scheduledDeparture: schedDep,
+                    actualArrival: actualArr && actualArr !== '-' ? actualArr : undefined,
+                    actualDeparture: actualDep && actualDep !== '-' ? actualDep : undefined,
+                    delayMinutes: delayMin
+                };
+
+                route.push(entry);
+
+                if (entry.actualDeparture) {
+                    currentStation = entry.stationCode;
+                    currentStationName = entry.stationName;
+                    overallDelay = entry.delayMinutes;
+                } else if (entry.actualArrival && !currentStation) {
+                    currentStation = entry.stationCode;
+                    currentStationName = entry.stationName;
+                    overallDelay = entry.delayMinutes;
+                }
+            }
+
+            if (route.length === 0) return null;
+
+            console.log(`✅ NTES parsed: ${route.length} stations, ${trainName}, delay=${overallDelay}min`);
+
+            return {
+                trainNumber,
+                trainName,
+                currentStation,
+                currentStationName,
+                delayMinutes: overallDelay,
+                isDelayed: overallDelay > 0,
+                route,
+                source: 'ntes',
+                lastUpdate: new Date(),
+                dataSource: '🚉 NTES (Live)'
+            };
+
+        } catch (err) {
+            console.warn('NTES HTML parse error:', err.message);
+            return null;
+        }
     },
 
     async getTrainProgressForStation(trainNumber, targetStationCode) {
